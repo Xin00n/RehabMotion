@@ -50,9 +50,9 @@ RehabMotion/
 ```bash
 cd backend
 
-# Buat dan aktifkan virtual environment
+# Buat dan aktifkan virtual environment (Pastikan virtual environment aktif agar tool CLI seperti alembic & uvicorn dikenali)
 python -m venv .venv
-# Windows:
+# Windows (PowerShell):
 .venv\Scripts\Activate.ps1
 # Linux/macOS:
 # source .venv/bin/activate
@@ -61,12 +61,44 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # Siapkan environment variables
-copy .env.example .env
+copy .env.example .env   # Windows (atau `cp .env.example .env` di Linux/macOS)
+```
 
-# Jalankan migrasi dan seed data awal
+> **PENTING — Konfigurasi `DATABASE_URL` di `.env`:**  
+> Secara default `.env.example` mengarah ke container Docker Postgres (`postgresql+psycopg://.../@db:5432/rehabmotion`). Pilih salah satu opsi sebelum migrasi:
+> - **Opsi A (Dengan Docker Postgres):**  
+>   Jalankan container database terlebih dahulu:
+>   ```bash
+>   docker compose up -d db
+>   ```
+> - **Opsi B (Tanpa Docker / SQLite Dev Cepat):**  
+>   Buka file `.env` lalu ubah baris `DATABASE_URL` menjadi:
+>   ```env
+>   DATABASE_URL=sqlite:///./rehabmotion.db
+>   ```
+
+```bash
+# Jalankan migrasi tabel dan seed library latihan (pastikan venv aktif)
 alembic upgrade head
 python -m app.seed
+```
 
+#### Membuat Akun Admin Pertama
+Role `admin` tidak dapat dibuat melalui registrasi publik. Skrip `app.create_admin` membaca konfigurasi melalui **Environment Variables** (`ADMIN_EMAIL`, `ADMIN_PASSWORD` minimal 10 karakter, dan opsional `ADMIN_FULL_NAME`):
+
+- **Windows (PowerShell):**
+  ```powershell
+  $env:ADMIN_EMAIL="admin@rehabmotion.com"
+  $env:ADMIN_PASSWORD="password-admin-aman-123"
+  $env:ADMIN_FULL_NAME="RehabMotion Admin"
+  python -m app.create_admin
+  ```
+- **Linux / macOS (Bash):**
+  ```bash
+  ADMIN_EMAIL="admin@rehabmotion.com" ADMIN_PASSWORD="password-admin-aman-123" ADMIN_FULL_NAME="RehabMotion Admin" python -m app.create_admin
+  ```
+
+```bash
 # Jalankan server API (default port 8000)
 uvicorn app.main:app --reload
 ```
