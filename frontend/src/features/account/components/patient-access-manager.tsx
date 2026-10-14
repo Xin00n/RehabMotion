@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Users, Mail, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,14 +8,13 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/features/auth/stores/auth-store"
 import { usePatientAccessList } from "@/features/patient/hooks/use-patient-data"
 import { grantCaregiverAccess, revokeCaregiverAccess } from "@/features/patient/api/patient-api"
-import type { CaregiverAccess } from "@/types/patient"
 
 export function PatientAccessManager() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const patientId = user?.id
 
-  const { data: accessList = [], isLoading, isError } = usePatientAccessList(patientId)
+  const { data: accessList = [], isLoading } = usePatientAccessList(patientId)
 
   const [email, setEmail] = useState("")
   const [accessRole, setAccessRole] = useState<"caregiver" | "clinician">("caregiver")
@@ -159,7 +158,7 @@ export function PatientAccessManager() {
           <div className="divide-y divide-border border-2 border-border rounded-xl overflow-hidden bg-card">
             {accessList.map((access) => {
               const roleLabel =
-                access.access_role === "clinician" || access.role === "clinician"
+                access.access_role === "clinician"
                   ? "Fisioterapis / Dokter"
                   : "Pendamping (Caregiver)"
               return (

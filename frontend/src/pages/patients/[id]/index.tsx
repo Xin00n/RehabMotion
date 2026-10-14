@@ -6,13 +6,9 @@ import {
   User,
   Activity,
   Plus,
-  AlertTriangle,
   CheckCircle2,
   AlertCircle,
-  Calendar,
-  Mail,
   Loader2,
-  Trash2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,17 +35,6 @@ export const EXERCISE_OPTIONS = [
 ]
 
 type ActiveTab = "profile" | "prescriptions"
-
-function formatDateIndo(dateStr?: string): string {
-  if (!dateStr) return "-"
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
 
 interface PatientProfileFormProps {
   patientId: string
