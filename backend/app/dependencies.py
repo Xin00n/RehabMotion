@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> User:
     unauthorized = HTTPException(
@@ -19,10 +20,11 @@ def get_current_user(
         detail="Token tidak valid atau belum diberikan",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if credentials is None:
+    raw_token = credentials.credentials if credentials else token
+    if not raw_token:
         raise unauthorized
     try:
-        payload = decode_access_token(credentials.credentials)
+        payload = decode_access_token(raw_token)
         user_id = int(payload.get("sub", ""))
         token_version = int(payload.get("ver", 0))
     except (jwt.PyJWTError, TypeError, ValueError):

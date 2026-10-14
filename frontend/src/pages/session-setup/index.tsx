@@ -53,6 +53,12 @@ export default function SessionSetupPage() {
         setCameraStream(stream)
         if (videoRef.current) {
           videoRef.current.srcObject = stream
+          videoRef.current.onloadedmetadata = () => {
+            if (videoRef.current) {
+              videoRef.current.play().catch(() => {})
+            }
+          }
+          videoRef.current.play().catch(() => {})
         }
       } catch {
         setCameraError(
@@ -63,12 +69,33 @@ export default function SessionSetupPage() {
 
     initCamera()
 
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && videoRef.current && activeStream) {
+        if (videoRef.current.srcObject !== activeStream) {
+          videoRef.current.srcObject = activeStream
+        }
+        if (videoRef.current.paused) {
+          videoRef.current.play().catch(() => {})
+        }
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibility)
       if (activeStream) {
         activeStream.getTracks().forEach((track) => track.stop())
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream && videoRef.current.srcObject !== cameraStream) {
+      videoRef.current.srcObject = cameraStream
+      videoRef.current.play().catch(() => {})
+    }
+  }, [cameraStream])
+
 
   const handleStartClicked = () => {
     // Tampilkan disclaimer nyeri terlebih dahulu sesuai PRD Section 9

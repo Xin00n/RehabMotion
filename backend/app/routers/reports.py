@@ -57,9 +57,12 @@ def export_sessions_pdf(
         started = s.started_at
         if started.tzinfo is None:
             started = started.replace(tzinfo=timezone.utc)
+        side_val = s.affected_side.value if hasattr(s.affected_side, "value") else str(s.affected_side)
+        status_val = s.status.value if hasattr(s.status, "value") else str(s.status)
+        exercise_name = s.exercise.name if s.exercise else f"Latihan #{s.exercise_id}"
         data.append([
-            str(s.id), started.strftime("%Y-%m-%d %H:%M"), s.exercise.name, s.affected_side.value,
-            s.status.value, str(s.duration_seconds or 0), f"{s.successful_repetitions}/{s.total_repetitions}",
+            str(s.id), started.strftime("%Y-%m-%d %H:%M"), exercise_name, side_val,
+            status_val, str(s.duration_seconds or 0), f"{s.successful_repetitions}/{s.total_repetitions}",
             f"{s.average_peak_rom_deg:.1f}°" if s.average_peak_rom_deg is not None else "—",
             f"{s.maximum_peak_rom_deg:.1f}°" if s.maximum_peak_rom_deg is not None else "—",
             s.stop_reason or "—",

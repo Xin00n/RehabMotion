@@ -1,6 +1,9 @@
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core import settings
@@ -33,6 +36,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Content-Disposition"],
 )
 
 for route in (auth.router, users.router, admin.router, exercises.router, patients.router, prescriptions.router,
@@ -49,3 +53,27 @@ def health_check():
 def readiness_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ready", "database": "connected"}
+
+
+# Single-Page Application (SPA) Static Files Serving
+_default_static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+STATIC_DIR = os.getenv("STATIC_DIR", _default_static_dir)
+
+if os.path.isdir(STATIC_DIR) and os.path.isfile(os.path.join(STATIC_DIR, "index.html")):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "healthz" or full_path == "readyz":
+            raise HTTPException(status_code=404, detail="Not Found")
+        candidate_file = os.path.join(STATIC_DIR, full_path)
+        if full_path and os.path.isfile(candidate_file):
+            return FileResponse(candidate_file)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+

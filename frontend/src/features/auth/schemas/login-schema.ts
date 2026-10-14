@@ -10,7 +10,8 @@ export type LoginFormData = z.infer<typeof loginSchema>
 
 export function toLoginPayload(data: LoginFormData): LoginRequest {
   return {
-    email: data.email,
+    email: data.email.trim().toLowerCase(),
     password: data.password,
   }
 }
+

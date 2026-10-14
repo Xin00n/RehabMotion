@@ -50,8 +50,9 @@ export default function ProgressPage() {
 
   // Resolusi patient_id: default diri sendiri jika role=patient, wajib parameter untuk caregiver/clinician
   const paramPatientId = searchParams.get("patient_id")
-  const isPatientRole = user?.role === "patient"
-  const isCaregiverRole = user?.role === "caregiver"
+  const userRole = user?.role?.toLowerCase()
+  const isPatientRole = userRole === "patient"
+  const isCaregiverRole = userRole === "caregiver"
 
   const resolvedPatientId = isPatientRole
     ? paramPatientId || user?.id
@@ -66,7 +67,10 @@ export default function ProgressPage() {
   )
 
   const handleExport = async () => {
-    if (!resolvedPatientId) return
+    if (!resolvedPatientId) {
+      setExportError("ID Pasien tidak ditemukan untuk mengunduh laporan PDF.")
+      return
+    }
     setIsExporting(true)
     setExportError(null)
     setExportSuccess(false)
@@ -74,11 +78,10 @@ export default function ProgressPage() {
     try {
       await downloadSessionReportPdf(resolvedPatientId)
       setExportSuccess(true)
-      setTimeout(() => setExportSuccess(false), 4000)
-    } catch {
-      setExportError(
-        "Gagal mengunduh laporan PDF. Pastikan backend server aktif dan mendukung endpoint laporan."
-      )
+      setTimeout(() => setExportSuccess(false), 5000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal mengunduh laporan PDF."
+      setExportError(msg)
     } finally {
       setIsExporting(false)
     }

@@ -49,6 +49,9 @@ export function SessionPlayer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const landmarkerRef = useRef<PoseLandmarker | null>(null)
   const animFrameRef = useRef<number | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const isSessionFinishedRef = useRef(false)
+  const currentAngleRef = useRef<number>(0)
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
@@ -58,6 +61,9 @@ export function SessionPlayer({
   const [repContext, setRepContext] = useState<RepCounterContext>(() =>
     createInitialRepCounterContext(0)
   )
+  const repContextRef = useRef<RepCounterContext>(repContext)
+  repContextRef.current = repContext
+
   const [isPoseReady, setIsPoseReady] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [isFinishing, setIsFinishing] = useState(false)
@@ -75,7 +81,31 @@ export function SessionPlayer({
       ),
     [prescription?.exercise?.name, prescription?.exercise_name, exerciseName]
   )
+  const resolvedExerciseTypeRef = useRef(resolvedExerciseType)
+  useEffect(() => {
+    resolvedExerciseTypeRef.current = resolvedExerciseType
+  }, [resolvedExerciseType])
+
+  const affectedSideRef = useRef(affectedSide)
+  useEffect(() => {
+    affectedSideRef.current = affectedSide
+  }, [affectedSide])
+
+  const targetRepsRef = useRef(targetReps)
+  useEffect(() => {
+    targetRepsRef.current = targetReps
+  }, [targetReps])
+
+  const targetRomRef = useRef(targetRom)
+  useEffect(() => {
+    targetRomRef.current = targetRom
+  }, [targetRom])
+
   const activeIndices = EXERCISE_LANDMARK_MAP[resolvedExerciseType]?.[affectedSide]
+  const activeIndicesRef = useRef(activeIndices)
+  useEffect(() => {
+    activeIndicesRef.current = activeIndices
+  }, [activeIndices])
 
   const repConfig: RepCounterConfig = useMemo(
     () => ({
@@ -89,6 +119,10 @@ export function SessionPlayer({
     }),
     [resolvedExerciseType, targetRom]
   )
+  const repConfigRef = useRef(repConfig)
+  useEffect(() => {
+    repConfigRef.current = repConfig
+  }, [repConfig])
 
   // Timer durasi
   useEffect(() => {
@@ -125,17 +159,20 @@ export function SessionPlayer({
   // Selesai Sesi (completed / stopped)
   const handleFinishSession = useCallback(
     async (notes?: string, isEmergency = false) => {
+      if (isSessionFinishedRef.current) return
+      isSessionFinishedRef.current = true
       setIsFinishing(true)
       audioCoach.speak(isEmergency ? "Sesi dihentikan." : "Sesi latihan selesai. Kerja luar biasa!", true)
       await flushBatchMeasurements()
 
       // Kalkulasi peak ROM
       const peaks = peakRomListRef.current
-      const maxPeak = peaks.length > 0 ? Math.max(...peaks) : currentAngle || 0
-      const avgPeak = peaks.length > 0 ? peaks.reduce((a, b) => a + b, 0) / peaks.length : currentAngle || 0
+      const current = currentAngleRef.current
+      const maxPeak = peaks.length > 0 ? Math.max(...peaks) : current || 0
+      const avgPeak = peaks.length > 0 ? peaks.reduce((a, b) => a + b, 0) / peaks.length : current || 0
 
-      const totalReps = repContext.repsCompleted
-      const successfulReps = repContext.repsCompleted // Rep counter hanya increment saat repetisi sukses penuh
+      const totalReps = repContextRef.current.repsCompleted
+      const successfulReps = repContextRef.current.repsCompleted
 
       try {
         await finishSession(sessionId, {
@@ -155,8 +192,12 @@ export function SessionPlayer({
       audioCoach.stop()
       navigate(`/dashboard?session_finished=true&reps=${totalReps}`)
     },
-    [flushBatchMeasurements, sessionId, repContext.repsCompleted, currentAngle, navigate]
+    [flushBatchMeasurements, sessionId, navigate]
   )
+  const handleFinishSessionRef = useRef(handleFinishSession)
+  useEffect(() => {
+    handleFinishSessionRef.current = handleFinishSession
+  }, [handleFinishSession])
 
   // Emergency Stop / Nyeri (Task 9e / PRD Section 9)
   const handleEmergencyStop = () => {
@@ -171,21 +212,68 @@ export function SessionPlayer({
     }
   }, [isAudioEnabled, repContext.feedbackMessage, repContext.state])
 
-  // Inisialisasi MediaPipe PoseLandmarker & Kamera
+  // Screen Wake Lock & Tab Visibility listener agar layar & kamera tidak sleep
   useEffect(() => {
-    let stream: MediaStream | null = null
-    let isCancelled = false
+    let wakeLock: any = null
 
-    async function initMediaPipe() {
+    async function requestWakeLock() {
+      if ("wakeLock" in navigator && !wakeLock) {
+        try {
+          wakeLock = await (navigator as any).wakeLock.request("screen")
+        } catch {
+          // Abaikan jika tidak didukung browser
+        }
+      }
+    }
+
+    requestWakeLock()
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        requestWakeLock()
+        const video = videoRef.current
+        const stream = mediaStreamRef.current
+        if (video && stream) {
+          if (video.srcObject !== stream) {
+            video.srcObject = stream
+          }
+          if (video.paused) {
+            video.play().catch(() => {})
+          }
+        }
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      if (wakeLock) {
+        try {
+          wakeLock.release().catch(() => {})
+        } catch {}
+        wakeLock = null
+      }
+    }
+  }, [])
+
+  // Inisialisasi MediaPipe PoseLandmarker & Kamera - Dijalankan SEKALI saat mount
+  useEffect(() => {
+    let isCancelled = false
+    let lastVideoTime = -1
+    let lastDetectTimestamp = -1
+
+    async function initMediaPipeAndCamera() {
       try {
-        // Load WASM fileset
+        setCameraError(null)
+
+        // 1. Inisialisasi WASM MediaPipe Vision & PoseLandmarker
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
         )
 
         if (isCancelled) return
 
-        // Inisialisasi PoseLandmarker
         const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath:
@@ -203,7 +291,7 @@ export function SessionPlayer({
 
         landmarkerRef.current = poseLandmarker
 
-        // Buka webcam
+        // 2. Akses Kamera Webcam
         const userMediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 640 },
@@ -218,56 +306,72 @@ export function SessionPlayer({
           return
         }
 
-        stream = userMediaStream
+        mediaStreamRef.current = userMediaStream
+
         if (videoRef.current) {
           videoRef.current.srcObject = userMediaStream
           videoRef.current.onloadedmetadata = () => {
-            if (videoRef.current) {
-              videoRef.current.play()
+            if (videoRef.current && !isCancelled) {
+              videoRef.current.play().catch(() => {})
             }
           }
+          videoRef.current.play().catch(() => {})
         }
 
-        let lastVideoTime = -1
-
-        // Loop frame processing
+        // 3. Loop Animasi Frame Processing
         const processFrame = () => {
           if (isCancelled) return
 
-          const video = videoRef.current
-          const canvas = canvasRef.current
-          const landmarker = landmarkerRef.current
+          try {
+            const video = videoRef.current
+            const canvas = canvasRef.current
+            const landmarker = landmarkerRef.current
 
-          if (video && canvas && landmarker && video.readyState >= 2) {
-            const ctx = canvas.getContext("2d")
+            if (video && canvas && landmarker && video.readyState >= 2 && !video.paused) {
+              const ctx = canvas.getContext("2d")
 
-            if (video.currentTime !== lastVideoTime) {
-              lastVideoTime = video.currentTime
-              const startTimeMs = performance.now()
-              const results = landmarker.detectForVideo(video, startTimeMs)
+              if (video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime
 
-              if (ctx) {
-                const width = canvas.width
-                const height = canvas.height
+                // Pastikan timestamp selalu monotonically increasing untuk MediaPipe
+                let nowMs = performance.now()
+                if (nowMs <= lastDetectTimestamp) {
+                  nowMs = lastDetectTimestamp + 1
+                }
+                lastDetectTimestamp = nowMs
 
-                if (results.landmarks && results.landmarks.length > 0 && results.landmarks[0].length >= 33) {
-                  if (!isPoseReady) setIsPoseReady(true)
-                  const landmarks = results.landmarks[0]
+                const results = landmarker.detectForVideo(video, nowMs)
 
-                  // 1. Hitung sudut sendi aktif
-                  const angle = calculateExerciseAngle(
-                    landmarks,
-                    resolvedExerciseType,
-                    affectedSide
-                  )
+                if (ctx) {
+                  const width = canvas.width
+                  const height = canvas.height
 
-                  if (angle !== null) {
-                    setCurrentAngle(angle)
+                  if (
+                    results.landmarks &&
+                    results.landmarks.length > 0 &&
+                    results.landmarks[0].length >= 33
+                  ) {
+                    setIsPoseReady(true)
+                    const landmarks = results.landmarks[0]
+                    const currentType = resolvedExerciseTypeRef.current
+                    const currentSide = affectedSideRef.current
+                    const currentIndices = activeIndicesRef.current
+                    const currentTargetReps = targetRepsRef.current
+                    const currentTargetRom = targetRomRef.current
 
-                    // 2. Step state machine
-                    setRepContext((prevCtx) => {
+                    // 1. Hitung sudut sendi aktif
+                    const angle = calculateExerciseAngle(landmarks, currentType, currentSide)
+
+                    if (angle !== null) {
+                      currentAngleRef.current = angle
+                      setCurrentAngle(angle)
+
+                      // 2. Step state machine
                       const now = Date.now()
-                      const nextCtx = stepRepCounter(prevCtx, angle, now, repConfig)
+                      const prevCtx = repContextRef.current
+                      const nextCtx = stepRepCounter(prevCtx, angle, now, repConfigRef.current)
+                      repContextRef.current = nextCtx
+                      setRepContext(nextCtx)
 
                       // Simpan peak ROM saat memasuki HOLD atau PEAK_CHECK
                       if (nextCtx.state === "HOLD" || nextCtx.state === "PEAK_CHECK") {
@@ -277,46 +381,48 @@ export function SessionPlayer({
                       // 3. Tambahkan ke batch buffer
                       measurementsBufferRef.current.push({
                         angle_deg: Number(angle.toFixed(1)),
-                        affected_side: affectedSide,
+                        affected_side: currentSide,
                         phase: nextCtx.state.toLowerCase(),
                         target_reached: nextCtx.state === "HOLD" || nextCtx.state === "RETURN",
                         measured_at: new Date(now).toISOString(),
-
-                        // State lokal frontend
                         timestamp_ms: now,
                         repetition_index: nextCtx.repsCompleted,
                         current_angle: angle,
-                        target_angle: targetRom,
+                        target_angle: currentTargetRom,
                         is_target_reached: nextCtx.state === "HOLD",
                         is_compensated: nextCtx.isCompensated,
                       })
 
                       // Cek apakah target repetisi tercapai
-                      if (nextCtx.repsCompleted >= targetReps && prevCtx.repsCompleted < targetReps) {
+                      if (
+                        nextCtx.repsCompleted >= currentTargetReps &&
+                        prevCtx.repsCompleted < currentTargetReps &&
+                        !isSessionFinishedRef.current
+                      ) {
                         setTimeout(() => {
-                          handleFinishSession("Target repetisi berhasil diselesaikan penuh.")
+                          handleFinishSessionRef.current("Target repetisi berhasil diselesaikan penuh.")
                         }, 1200)
                       }
+                    }
 
-                      return nextCtx
-                    })
+                    // 4. Render skeleton overlay
+                    drawPoseSkeleton(
+                      ctx,
+                      landmarks,
+                      width,
+                      height,
+                      repContextRef.current.state,
+                      repContextRef.current.isCompensated,
+                      currentIndices
+                    )
+                  } else {
+                    ctx.clearRect(0, 0, width, height)
                   }
-
-                  // 4. Render skeleton overlay
-                  drawPoseSkeleton(
-                    ctx,
-                    landmarks,
-                    width,
-                    height,
-                    repContext.state,
-                    repContext.isCompensated,
-                    activeIndices
-                  )
-                } else {
-                  ctx.clearRect(0, 0, width, height)
                 }
               }
             }
+          } catch (frameErr) {
+            console.warn("MediaPipe frame processing error (non-fatal):", frameErr)
           }
 
           if (!isCancelled) {
@@ -324,28 +430,34 @@ export function SessionPlayer({
           }
         }
 
-        processFrame()
-      } catch {
-        setCameraError("Kamera atau model MediaPipe Pose tidak dapat diinisialisasi.")
+        // Mulai frame loop
+        animFrameRef.current = requestAnimationFrame(processFrame)
+      } catch (err) {
+        console.error("Camera / MediaPipe initialization error:", err)
+        setCameraError("Kamera atau model MediaPipe Pose tidak dapat diinisialisasi. Pastikan izin kamera aktif.")
       }
     }
 
-    initMediaPipe()
+    initMediaPipeAndCamera()
 
     return () => {
       isCancelled = true
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
       }
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop())
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+        mediaStreamRef.current = null
       }
       if (landmarkerRef.current) {
         landmarkerRef.current.close()
+        landmarkerRef.current = null
       }
       audioCoach.stop()
     }
-  }, [resolvedExerciseType, affectedSide, targetRom, targetReps, repConfig, activeIndices, handleFinishSession, isPoseReady, repContext.state, repContext.isCompensated])
+  }, []) // Mount-only: stream kamera dan MediaPipe tetap hidup stabil tanpa remount berulang
+
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60)
@@ -403,13 +515,18 @@ export function SessionPlayer({
         <div className="md:col-span-8 space-y-3">
           <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-black border-2 border-border shadow-md">
             {cameraError ? (
-              <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-destructive bg-destructive/10">
-                <p className="font-semibold">{cameraError}</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-destructive bg-destructive/10 space-y-3">
+                <AlertOctagon className="size-10 mx-auto opacity-70" />
+                <p className="font-semibold text-sm">{cameraError}</p>
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                  Muat Ulang Sesi
+                </Button>
               </div>
             ) : (
               <>
                 <video
                   ref={videoRef}
+                  autoPlay
                   playsInline
                   muted
                   className="w-full h-full object-cover -scale-x-100"

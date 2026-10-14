@@ -45,6 +45,11 @@ export async function apiClient<T>(
     })
 
     if (!response.ok) {
+      if (response.status === 401 && token) {
+        // Token kadaluarsa atau tidak valid di backend, hapus auth agar tidak terkunci di sesi mati
+        authStore.clearAuth()
+      }
+
       let errorData: unknown
       let errorMessage = `Request failed with status ${response.status}`
 
@@ -71,7 +76,10 @@ export async function apiClient<T>(
 
     return response.json() as Promise<T>
   } catch (err) {
-    // Fallback otomatis ke Mock Dev Handler jika backend FastAPI offline
+    if (err instanceof ApiError) {
+      throw err
+    }
+    // Fallback otomatis ke Mock Dev Handler jika backend FastAPI offline (NetworkError)
     const mockRes = handleMockRequest<T>(
       normalizedEndpoint,
       (restOptions.method as string) || "GET",

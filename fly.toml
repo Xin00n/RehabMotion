@@ -1,0 +1,37 @@
+app = 'rehabmotion'
+primary_region = 'sin'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  PORT = '8080'
+  APP_ENV = 'production'
+  DATABASE_URL = 'sqlite:////data/rehabmotion.db'
+  STATIC_DIR = '/app/frontend_dist'
+  CORS_ORIGINS = 'https://rehabmotion.fly.dev,http://localhost:3000,http://localhost:5173'
+
+[mounts]
+  source = 'rehabmotion_data'
+  destination = '/data'
+  initial_size = '1gb'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = '10s'
+    interval = '30s'
+    method = 'GET'
+    timeout = '5s'
+    path = '/healthz'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
