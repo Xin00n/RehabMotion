@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rehabmotion
+      POSTGRES_USER: rehabmotion
+      POSTGRES_PASSWORD: rehabmotion_dev_password
+    volumes:
+      - rehabmotion_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rehabmotion -d rehabmotion"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  api:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://rehabmotion:rehabmotion_dev_password@db:5432/rehabmotion
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  rehabmotion_postgres:
