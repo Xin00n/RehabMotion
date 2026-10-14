@@ -3,11 +3,25 @@ class AudioCoach {
   private lastSpokenText = ""
   private lastSpokenTime = 0
   private cooldownMs = 2500 // minimal jeda antar ucapan agar tidak bertumpuk
+  private idVoice: SpeechSynthesisVoice | null = null
 
   constructor() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       this.synth = window.speechSynthesis
+      this.loadVoices()
+      if ("onvoiceschanged" in this.synth) {
+        this.synth.onvoiceschanged = () => this.loadVoices()
+      }
     }
+  }
+
+  private loadVoices() {
+    if (!this.synth) return
+    const voices = this.synth.getVoices()
+    this.idVoice =
+      voices.find((v) => v.lang.toLowerCase().startsWith("id")) ||
+      voices.find((v) => v.lang.toLowerCase().includes("indonesia")) ||
+      null
   }
 
   speak(text: string, force = false) {
@@ -33,10 +47,11 @@ class AudioCoach {
     utterance.pitch = 1.0
 
     // Pilih suara bahasa Indonesia jika tersedia di browser
-    const voices = this.synth.getVoices()
-    const idVoice = voices.find((v) => v.lang.startsWith("id"))
-    if (idVoice) {
-      utterance.voice = idVoice
+    if (!this.idVoice) {
+      this.loadVoices()
+    }
+    if (this.idVoice) {
+      utterance.voice = this.idVoice
     }
 
     this.lastSpokenText = text
