@@ -1,11 +1,10 @@
 import { useState } from "react"
-import { useParams, Link, useNavigate } from "react-router-dom"
+import { useParams, Link, useNavigate, Navigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
   User,
   Activity,
-  Shield,
   Plus,
   AlertTriangle,
   CheckCircle2,
@@ -22,22 +21,24 @@ import { Label } from "@/components/ui/label"
 import {
   usePatientProfile,
   usePatientPrescriptions,
-  usePatientAccessList,
 } from "@/features/patient/hooks/use-patient-data"
 import {
   updatePatientProfile,
   createPatientPrescription,
-  grantCaregiverAccess,
-  revokeCaregiverAccess,
 } from "@/features/patient/api/patient-api"
 import type {
-  CaregiverAccess,
   CreatePrescriptionDto,
   AffectedSide,
   PatientProfile,
 } from "@/types/patient"
 
-type ActiveTab = "profile" | "prescriptions" | "access"
+export const EXERCISE_OPTIONS = [
+  { id: 1, name: "Fleksi Siku (Elbow Flexion)", minRom: 40, maxRom: 135, defaultRom: 90 },
+  { id: 2, name: "Abduksi Bahu (Shoulder Abduction)", minRom: 0, maxRom: 90, defaultRom: 80 },
+  { id: 3, name: "Ekstensi Lutut (Seated Knee Extension)", minRom: 90, maxRom: 160, defaultRom: 120 },
+]
+
+type ActiveTab = "profile" | "prescriptions"
 
 function formatDateIndo(dateStr?: string): string {
   if (!dateStr) return "-"
@@ -198,6 +199,10 @@ export default function PatientDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  if (!patientId || patientId === "grant-access" || isNaN(Number(patientId))) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   const [activeTab, setActiveTab] = useState<ActiveTab>("profile")
 
   // Query Data
@@ -210,96 +215,58 @@ export default function PatientDetailPage() {
   const {
     data: prescriptions = [],
     isLoading: isLoadingPrescriptions,
-  } = usePatientPrescriptions(false)
-
-  const {
-    data: accessList = [],
-    isLoading: isLoadingAccess,
-  } = usePatientAccessList(patientId)
+  } = usePatientPrescriptions(false, patientId)
 
   // State Form Resep Baru
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false)
   const [newPrescription, setNewPrescription] = useState<CreatePrescriptionDto>({
+    exercise_id: 1,
     exercise_name: "Fleksi Siku (Elbow Flexion)",
     affected_side: "right",
     target_rom: 90,
+    target_rom_deg: 90,
     target_repetitions: 10,
     target_sets: 3,
     notes: "",
   })
   const [isCreatingPrescription, setIsCreatingPrescription] = useState(false)
   const [prescriptionSuccessMsg, setPrescriptionSuccessMsg] = useState<string | null>(null)
+  const [prescriptionErrorMsg, setPrescriptionErrorMsg] = useState<string | null>(null)
 
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!patientId) return
+    if (!patientId || isNaN(Number(patientId))) return
 
     setIsCreatingPrescription(true)
+    setPrescriptionSuccessMsg(null)
+    setPrescriptionErrorMsg(null)
+
     try {
-      await createPatientPrescription(patientId, newPrescription)
+      const selectedEx =
+        EXERCISE_OPTIONS.find((ex) => ex.id === (newPrescription.exercise_id || 1)) ||
+        EXERCISE_OPTIONS[0]
+
+      await createPatientPrescription(patientId, {
+        exercise_id: selectedEx.id,
+        exercise_name: selectedEx.name,
+        affected_side: newPrescription.affected_side,
+        target_rom: Number(newPrescription.target_rom),
+        target_rom_deg: Number(newPrescription.target_rom),
+        target_repetitions: Number(newPrescription.target_repetitions),
+        target_sets: Number(newPrescription.target_sets || 3),
+        notes: newPrescription.notes || "",
+      })
       await queryClient.invalidateQueries({
         queryKey: ["patients", patientId, "prescriptions"],
       })
       setShowPrescriptionForm(false)
       setPrescriptionSuccessMsg("Resep latihan baru berhasil ditambahkan.")
       setTimeout(() => setPrescriptionSuccessMsg(null), 4000)
-    } catch {
-      alert("Gagal menambahkan resep latihan.")
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal menambahkan resep latihan."
+      setPrescriptionErrorMsg(msg)
     } finally {
       setIsCreatingPrescription(false)
-    }
-  }
-
-  // State Form Beri Akses Caregiver
-  const [grantEmail, setGrantEmail] = useState("")
-  const [grantNotes, setGrantNotes] = useState("")
-  const [isGrantingAccess, setIsGrantingAccess] = useState(false)
-  const [grantSuccessMsg, setGrantSuccessMsg] = useState<string | null>(null)
-
-  const handleGrantAccessSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!patientId || !grantEmail) return
-
-    setIsGrantingAccess(true)
-    try {
-      await grantCaregiverAccess({
-        patient_id: Number(patientId),
-        email: grantEmail,
-        access_role: "caregiver",
-        notes: grantNotes,
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["patients", patientId, "access"],
-      })
-      setGrantEmail("")
-      setGrantNotes("")
-      setGrantSuccessMsg("Izin akses pendamping berhasil diberikan.")
-      setTimeout(() => setGrantSuccessMsg(null), 4000)
-    } catch {
-      alert("Gagal memberikan akses pendamping.")
-    } finally {
-      setIsGrantingAccess(false)
-    }
-  }
-
-  // State Modal Konfirmasi Sensitif Revoke Akses
-  const [accessToRevoke, setAccessToRevoke] = useState<CaregiverAccess | null>(null)
-  const [isRevoking, setIsRevoking] = useState(false)
-
-  const handleConfirmRevoke = async () => {
-    if (!accessToRevoke || !patientId) return
-
-    setIsRevoking(true)
-    try {
-      await revokeCaregiverAccess(Number(patientId), accessToRevoke.id)
-      await queryClient.invalidateQueries({
-        queryKey: ["patients", patientId, "access"],
-      })
-      setAccessToRevoke(null)
-    } catch {
-      alert("Gagal mencabut akses pendamping.")
-    } finally {
-      setIsRevoking(false)
     }
   }
 
@@ -393,19 +360,6 @@ export default function PatientDetailPage() {
             <Activity className="size-4" />
             <span>2. Resep Latihan ({prescriptions.length})</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("access")}
-            className={`flex items-center gap-2 px-5 py-3 text-base font-bold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "access"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Shield className="size-4" />
-            <span>3. Manajemen Akses ({accessList.length})</span>
-          </button>
         </div>
 
         {/* TAB 1: PROFIL PASIEN */}
@@ -468,6 +422,13 @@ export default function PatientDetailPage() {
               </div>
             )}
 
+            {prescriptionErrorMsg && (
+              <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-semibold flex items-center gap-2.5">
+                <AlertCircle className="size-5 shrink-0" />
+                <span>{prescriptionErrorMsg}</span>
+              </div>
+            )}
+
             {/* Form Buat Resep Baru (Toggle) */}
             {showPrescriptionForm && (
               <form
@@ -483,16 +444,29 @@ export default function PatientDetailPage() {
                     <Label className="text-sm font-bold text-foreground">
                       Jenis Gerakan Latihan
                     </Label>
-                    <Input
-                      type="text"
-                      required
-                      value={newPrescription.exercise_name}
-                      onChange={(e) =>
-                        setNewPrescription({ ...newPrescription, exercise_name: e.target.value })
-                      }
-                      placeholder="Contoh: Fleksi Siku, Abduksi Bahu"
-                      className="h-10"
-                    />
+                    <select
+                      value={newPrescription.exercise_id || 1}
+                      onChange={(e) => {
+                        const selectedId = Number(e.target.value)
+                        const selectedEx =
+                          EXERCISE_OPTIONS.find((ex) => ex.id === selectedId) ||
+                          EXERCISE_OPTIONS[0]
+                        setNewPrescription({
+                          ...newPrescription,
+                          exercise_id: selectedEx.id,
+                          exercise_name: selectedEx.name,
+                          target_rom: selectedEx.defaultRom,
+                          target_rom_deg: selectedEx.defaultRom,
+                        })
+                      }}
+                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none"
+                    >
+                      {EXERCISE_OPTIONS.map((ex) => (
+                        <option key={ex.id} value={ex.id}>
+                          {ex.name} (Rentang: {ex.minRom}° – {ex.maxRom}°)
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
@@ -502,7 +476,10 @@ export default function PatientDetailPage() {
                     <select
                       value={newPrescription.affected_side}
                       onChange={(e) =>
-                        setNewPrescription({ ...newPrescription, affected_side: e.target.value as AffectedSide })
+                        setNewPrescription({
+                          ...newPrescription,
+                          affected_side: e.target.value as AffectedSide,
+                        })
                       }
                       className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none"
                     >
@@ -519,11 +496,23 @@ export default function PatientDetailPage() {
                     <Input
                       type="number"
                       required
-                      min={10}
-                      max={180}
+                      min={
+                        EXERCISE_OPTIONS.find(
+                          (ex) => ex.id === (newPrescription.exercise_id || 1)
+                        )?.minRom || 0
+                      }
+                      max={
+                        EXERCISE_OPTIONS.find(
+                          (ex) => ex.id === (newPrescription.exercise_id || 1)
+                        )?.maxRom || 180
+                      }
                       value={newPrescription.target_rom}
                       onChange={(e) =>
-                        setNewPrescription({ ...newPrescription, target_rom: Number(e.target.value) })
+                        setNewPrescription({
+                          ...newPrescription,
+                          target_rom: Number(e.target.value),
+                          target_rom_deg: Number(e.target.value),
+                        })
                       }
                       className="h-10"
                     />
@@ -550,13 +539,39 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="prescription_notes" className="text-sm font-bold text-foreground">
+                    Catatan Klinis Latihan (Opsional)
+                  </Label>
+                  <Input
+                    id="prescription_notes"
+                    type="text"
+                    placeholder="Contoh: Lakukan perlahan, istirahat bila terasa pegal"
+                    value={newPrescription.notes || ""}
+                    onChange={(e) =>
+                      setNewPrescription({
+                        ...newPrescription,
+                        notes: e.target.value,
+                      })
+                    }
+                    className="h-10"
+                  />
+                </div>
+
                 <div className="flex items-center gap-3 pt-2">
                   <Button
                     type="submit"
                     disabled={isCreatingPrescription}
                     className="font-bold cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
                   >
-                    {isCreatingPrescription ? "Menyimpan Resep..." : "Simpan Resep Latihan"}
+                    {isCreatingPrescription ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Menyimpan Resep...
+                      </>
+                    ) : (
+                      "Simpan Resep Latihan"
+                    )}
                   </Button>
                   <Button
                     type="button"
@@ -608,7 +623,9 @@ export default function PatientDetailPage() {
                     <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-border">
                       <div>
                         <span className="text-xs text-muted-foreground block">Target Sudut ROM</span>
-                        <strong className="text-base text-primary">{p.target_rom}°</strong>
+                        <strong className="text-base text-primary">
+                          {(p.target_rom_deg ?? p.target_rom)}°
+                        </strong>
                       </div>
                       <div>
                         <span className="text-xs text-muted-foreground block">Repetisi</span>
@@ -617,224 +634,18 @@ export default function PatientDetailPage() {
                         </strong>
                       </div>
                     </div>
+                    {p.notes && (
+                      <p className="text-xs text-muted-foreground italic border-t border-border/60 pt-2">
+                        {p.notes}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
-
-        {/* TAB 3: MANAJEMEN AKSES CAREGIVER */}
-        {activeTab === "access" && (
-          <div className="rounded-2xl border-2 border-border bg-card p-6 sm:p-8 space-y-8">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">
-                Manajemen Izin Akses Pendamping (Caregiver)
-              </h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Kelola daftar akun pendamping yang diizinkan memantau perkembangan dan kepatuhan latihan pasien ini.
-              </p>
-            </div>
-
-            {grantSuccessMsg && (
-              <div className="p-4 rounded-xl border border-success/30 bg-success/10 text-success text-sm font-semibold flex items-center gap-2.5">
-                <CheckCircle2 className="size-5 shrink-0" />
-                <span>{grantSuccessMsg}</span>
-              </div>
-            )}
-
-            {/* Form Grant Akses Baru */}
-            <form
-              onSubmit={handleGrantAccessSubmit}
-              className="p-5 sm:p-6 rounded-xl border-2 border-border bg-muted/30 space-y-4"
-            >
-              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Mail className="size-4" />
-                <span>Beri Akses Pendamping Baru</span>
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="grant_email" className="text-xs font-bold text-foreground">
-                    Email Akun Pendamping (Caregiver)
-                  </Label>
-                  <Input
-                    id="grant_email"
-                    type="email"
-                    required
-                    placeholder="caregiver@email.com"
-                    value={grantEmail}
-                    onChange={(e) => setGrantEmail(e.target.value)}
-                    className="h-10"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="grant_notes" className="text-xs font-bold text-foreground">
-                    Catatan Hubungan (Opsional)
-                  </Label>
-                  <Input
-                    id="grant_notes"
-                    type="text"
-                    placeholder="Contoh: Anak kandung / Pendamping harian"
-                    value={grantNotes}
-                    onChange={(e) => setGrantNotes(e.target.value)}
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isGrantingAccess}
-                className="font-bold cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
-              >
-                {isGrantingAccess ? "Memproses Izin Akses..." : "Beri Izin Akses"}
-              </Button>
-            </form>
-
-            {/* List Caregiver yang Memiliki Akses */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold text-foreground">
-                Daftar Pendamping Terdaftar
-              </h3>
-
-              {isLoadingAccess ? (
-                <div className="py-6 text-center text-muted-foreground animate-pulse">
-                  Memuat daftar akses pendamping...
-                </div>
-              ) : accessList.length === 0 ? (
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground">
-                  Belum ada akun pendamping yang terhubung dengan pasien ini.
-                </div>
-              ) : (
-                <div className="divide-y divide-border border-2 border-border rounded-xl overflow-hidden bg-background">
-                  {accessList.map((access) => {
-                    const isPending =
-                      access.status?.toLowerCase() === "pending" ||
-                      access.status?.toLowerCase().includes("revoke")
-                    return (
-                      <div
-                        key={access.id}
-                        className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-base text-foreground">
-                              {access.caregiver_name || access.caregiver_email}
-                            </span>
-
-                            {/* Badge Status: Sesuai aturan, --warning digunakan untuk status pending atau akan direvoke */}
-                            {isPending ? (
-                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-warning/40 bg-warning/15 text-warning">
-                                {access.status === "pending"
-                                  ? "Menunggu Konfirmasi"
-                                  : "Akses Akan Dicabut"}
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-success/40 bg-success/15 text-success">
-                                Akses Aktif
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-muted-foreground truncate">
-                            {access.caregiver_email}
-                            {access.notes ? ` • ${access.notes}` : ""}
-                          </p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-0.5">
-                            <Calendar className="size-3.5" />
-                            <span>Diberikan sejak: {formatDateIndo(access.granted_at)}</span>
-                          </p>
-                        </div>
-
-                        {/* Tombol Revoke: Memicu Modal Konfirmasi Sensitif */}
-                        <div className="shrink-0">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setAccessToRevoke(access)}
-                            className="cursor-pointer gap-1.5 text-danger border-border hover:bg-danger/10 hover:border-danger/40"
-                          >
-                            <Trash2 className="size-4" />
-                            <span>Cabut Akses</span>
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </main>
-
-      {/* Modal Konfirmasi Sensitif Sebelum Revoke Akses */}
-      {accessToRevoke && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border-2 border-border rounded-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="flex items-start gap-4">
-              <div className="size-12 rounded-xl bg-danger/10 text-danger flex items-center justify-center shrink-0">
-                <AlertTriangle className="size-6 stroke-[2.2]" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-xl font-extrabold text-foreground">
-                  Konfirmasi Pencabutan Akses
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Tindakan sensitif keamanan data medis pasien.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-2 text-sm text-foreground/90 leading-relaxed">
-              <p>
-                Apakah Anda yakin ingin mencabut izin akses pendamping untuk:
-              </p>
-              <div className="p-2.5 rounded-lg bg-background border border-border font-bold text-foreground">
-                {accessToRevoke.caregiver_name || accessToRevoke.caregiver_email}
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Setelah dicabut, pendamping tidak akan lagi memiliki hak akses untuk memantau grafik pemulihan sudut gerak (ROM) dan riwayat sesi pasien ini.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isRevoking}
-                onClick={() => setAccessToRevoke(null)}
-                className="w-full sm:w-auto h-11 text-sm font-semibold cursor-pointer"
-              >
-                Batalkan
-              </Button>
-
-              {/* Tombol Revoke Sensitif: Menggunakan warna --danger khusus untuk aksi ini */}
-              <Button
-                type="button"
-                disabled={isRevoking}
-                onClick={handleConfirmRevoke}
-                className="w-full sm:w-auto h-11 text-sm font-bold cursor-pointer bg-danger text-primary-foreground hover:bg-danger/90 gap-1.5"
-              >
-                {isRevoking ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    <span>Mencabut Akses...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="size-4" />
-                    <span>Ya, Cabut Akses Sekarang</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="max-w-5xl w-full mx-auto text-center py-6 text-sm text-muted-foreground border-t border-border">

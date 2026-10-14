@@ -68,6 +68,54 @@ def update_my_profile(payload: PatientProfileUpdate, user: User = Depends(get_cu
     return profile
 
 
+@router.get("/{patient_id}", response_model=PatientSummary)
+def get_patient_summary(patient_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    require_patient_access(db, user, patient_id)
+    patient = db.get(User, patient_id)
+    if not patient or patient.role != UserRole.PATIENT:
+        raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
+    profile = db.get(PatientProfile, patient_id)
+    return PatientSummary(
+        id=patient.id,
+        full_name=patient.full_name,
+        email=patient.email,
+        role=patient.role,
+        default_affected_side=profile.default_affected_side if profile else None,
+    )
+
+
+@router.get("/{patient_id}/profile", response_model=PatientProfileOut)
+def get_patient_profile(patient_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    require_patient_access(db, user, patient_id)
+    patient = db.get(User, patient_id)
+    if not patient or patient.role != UserRole.PATIENT:
+        raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
+    profile = db.get(PatientProfile, patient_id)
+    if not profile:
+        profile = PatientProfile(user_id=patient_id)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    return profile
+
+
+@router.patch("/{patient_id}/profile", response_model=PatientProfileOut)
+def update_patient_profile(patient_id: int, payload: PatientProfileUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    require_patient_access(db, user, patient_id)
+    patient = db.get(User, patient_id)
+    if not patient or patient.role != UserRole.PATIENT:
+        raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
+    profile = db.get(PatientProfile, patient_id)
+    if not profile:
+        profile = PatientProfile(user_id=patient_id)
+        db.add(profile)
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(profile, key, value)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
 @router.post("/{patient_id}/access", response_model=AccessOut, status_code=status.HTTP_201_CREATED)
 def grant_access(patient_id: int, payload: AccessCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role != UserRole.ADMIN and not (user.role == UserRole.PATIENT and user.id == patient_id):

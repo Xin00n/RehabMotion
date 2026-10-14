@@ -20,8 +20,8 @@ export default function SessionPlayPage() {
       ? (prescription.affected_side as Side)
       : paramSide
 
-  const targetRom = prescription?.target_rom
-    ? Number(prescription.target_rom)
+  const targetRom = (prescription?.target_rom_deg ?? prescription?.target_rom)
+    ? Number(prescription.target_rom_deg ?? prescription.target_rom)
     : 90
 
   const targetReps = prescription?.target_repetitions || 10

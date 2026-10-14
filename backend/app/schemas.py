@@ -30,6 +30,14 @@ class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=10, max_length=128)
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_old_password_alias(cls, data):
+        if isinstance(data, dict):
+            if "current_password" not in data and "old_password" in data:
+                data["current_password"] = data["old_password"]
+        return data
+
 
 class UserActiveUpdate(BaseModel):
     is_active: bool
@@ -56,10 +64,30 @@ class TokenResponse(BaseModel):
 
 
 class PatientProfileOut(ORMModel):
+    id: int | None = None
     user_id: int
+    full_name: str | None = None
+    email: EmailStr | None = None
     default_affected_side: AffectedSide
     caregiver_notes: str | None = None
     updated_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_patient_info(cls, data):
+        if hasattr(data, "user_id"):
+            res = {
+                "id": getattr(data, "user_id"),
+                "user_id": getattr(data, "user_id"),
+                "default_affected_side": getattr(data, "default_affected_side", AffectedSide.BOTH),
+                "caregiver_notes": getattr(data, "caregiver_notes", None),
+                "updated_at": getattr(data, "updated_at", datetime.now()),
+            }
+            if hasattr(data, "user") and data.user:
+                res["full_name"] = getattr(data.user, "full_name", None)
+                res["email"] = getattr(data.user, "email", None)
+            return res
+        return data
 
 
 class PatientProfileUpdate(BaseModel):
@@ -102,9 +130,11 @@ class ExerciseOut(ORMModel):
 
 
 class PrescriptionCreate(BaseModel):
-    exercise_id: int
+    exercise_id: int | None = None
+    exercise_name: str | None = None
     affected_side: AffectedSide
-    target_rom_deg: float = Field(ge=0, le=180)
+    target_rom_deg: float | None = Field(default=None, ge=0, le=180)
+    target_rom: float | None = Field(default=None, ge=0, le=180)
     rom_margin_deg: float = Field(default=5, ge=0, le=30)
     hold_seconds: float = Field(default=0, ge=0, le=60)
     target_repetitions: int = Field(default=10, ge=1, le=200)
@@ -112,8 +142,32 @@ class PrescriptionCreate(BaseModel):
     ends_on: date | None = None
     notes: str | None = Field(default=None, max_length=2000)
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_prescription_aliases(cls, data):
+        if isinstance(data, dict):
+            if "target_rom_deg" not in data or data.get("target_rom_deg") is None:
+                if "target_rom" in data and data.get("target_rom") is not None:
+                    data["target_rom_deg"] = data["target_rom"]
+            # Map exercise_name to exercise_id if exercise_id is missing
+            if ("exercise_id" not in data or not data.get("exercise_id")) and "exercise_name" in data:
+                name = str(data.get("exercise_name", "")).lower()
+                if "elbow" in name or "siku" in name:
+                    data["exercise_id"] = 1
+                elif "shoulder" in name or "bahu" in name:
+                    data["exercise_id"] = 2
+                elif "knee" in name or "lutut" in name:
+                    data["exercise_id"] = 3
+                else:
+                    data["exercise_id"] = 1
+        return data
+
     @model_validator(mode="after")
     def validate_dates(self):
+        if self.exercise_id is None:
+            raise ValueError("exercise_id wajib diisi")
+        if self.target_rom_deg is None:
+            raise ValueError("target_rom_deg wajib diisi")
         if self.ends_on and self.ends_on < self.starts_on:
             raise ValueError("ends_on tidak boleh sebelum starts_on")
         return self
@@ -138,6 +192,7 @@ class PrescriptionOut(ORMModel):
     exercise_id: int
     affected_side: AffectedSide
     target_rom_deg: float
+    target_rom: float | None = None
     rom_margin_deg: float
     hold_seconds: float
     target_repetitions: int
@@ -148,6 +203,12 @@ class PrescriptionOut(ORMModel):
     created_at: datetime
     updated_at: datetime
     exercise: ExerciseOut
+
+    @model_validator(mode="after")
+    def populate_target_rom(self):
+        if self.target_rom is None and self.target_rom_deg is not None:
+            self.target_rom = self.target_rom_deg
+        return self
 
 
 class SessionCreate(BaseModel):

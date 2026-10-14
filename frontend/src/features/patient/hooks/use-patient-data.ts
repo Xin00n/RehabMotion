@@ -15,17 +15,23 @@ import type {
   CaregiverAccess,
 } from "@/types/patient"
 
-export function usePatientPrescriptions(activeOnly = true) {
+export function usePatientPrescriptions(
+  activeOnly = true,
+  explicitPatientId?: number | string
+) {
   const { user } = useAuth()
-  const patientId = user?.id
+  const patientId =
+    explicitPatientId !== undefined && explicitPatientId !== null
+      ? explicitPatientId
+      : user?.id
 
   return useQuery<Prescription[], Error>({
     queryKey: ["patients", patientId, "prescriptions", { activeOnly }],
     queryFn: () => {
-      if (!patientId) return Promise.resolve([])
+      if (!patientId || isNaN(Number(patientId))) return Promise.resolve([])
       return fetchPatientPrescriptions(patientId, activeOnly)
     },
-    enabled: Boolean(patientId),
+    enabled: Boolean(patientId && !isNaN(Number(patientId))),
   })
 }
 
@@ -118,10 +124,11 @@ export function usePatientProfile(patientId?: number | string) {
   return useQuery<PatientProfile, Error>({
     queryKey: ["patients", patientId, "profile"],
     queryFn: () => {
-      if (patientId === undefined || patientId === null) throw new Error("Patient ID is required")
+      if (patientId === undefined || patientId === null || isNaN(Number(patientId)))
+        throw new Error("Patient ID is required")
       return fetchPatientProfile(patientId)
     },
-    enabled: patientId !== undefined && patientId !== null,
+    enabled: Boolean(patientId !== undefined && patientId !== null && !isNaN(Number(patientId))),
   })
 }
 
@@ -129,9 +136,10 @@ export function usePatientAccessList(patientId?: number | string) {
   return useQuery<CaregiverAccess[], Error>({
     queryKey: ["patients", patientId, "access"],
     queryFn: () => {
-      if (patientId === undefined || patientId === null) return Promise.resolve([])
+      if (patientId === undefined || patientId === null || isNaN(Number(patientId)))
+        return Promise.resolve([])
       return fetchPatientAccessList(patientId)
     },
-    enabled: patientId !== undefined && patientId !== null,
+    enabled: Boolean(patientId !== undefined && patientId !== null && !isNaN(Number(patientId))),
   })
 }

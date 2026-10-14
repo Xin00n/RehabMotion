@@ -6,8 +6,9 @@ export interface UpdateProfileRequest {
 }
 
 export interface ChangePasswordRequest {
-  old_password: string
+  current_password: string
   new_password: string
+  old_password?: string
 }
 
 export async function updateProfile(payload: UpdateProfileRequest): Promise<User> {

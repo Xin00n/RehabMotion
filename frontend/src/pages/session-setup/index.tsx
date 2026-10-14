@@ -274,7 +274,9 @@ export default function SessionSetupPage() {
               <div className="text-sm text-muted-foreground pt-1 border-t border-border/80">
                 <span>Target Sudut (ROM): </span>
                 <span className="font-bold text-foreground">
-                  {prescription?.target_rom ? `${prescription.target_rom}°` : "Sesuai Toleransi"}
+                  {(prescription?.target_rom_deg ?? prescription?.target_rom)
+                    ? `${prescription?.target_rom_deg ?? prescription?.target_rom}°`
+                    : "Sesuai Toleransi"}
                 </span>
               </div>
             </div>

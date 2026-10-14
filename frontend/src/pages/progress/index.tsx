@@ -137,35 +137,35 @@ export default function ProgressPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-4 sm:p-6 md:p-10">
       {/* Top Header */}
-      <header className="max-w-5xl w-full mx-auto flex items-center justify-between pb-6 border-b border-border">
+      <header className="max-w-5xl w-full mx-auto flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-border">
         <Link
           to="/dashboard"
           className={buttonVariants({
             variant: "outline",
             size: "sm",
-            className: "cursor-pointer gap-1.5",
+            className: "cursor-pointer gap-1.5 shrink-0",
           })}
         >
           <ArrowLeft className="size-4" />
           <span>Kembali ke Dashboard</span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Tombol Ekspor PDF */}
           <Button
             onClick={handleExport}
             disabled={isExporting || isLoadingSessions}
-            className="h-11 px-5 text-sm sm:text-base font-semibold cursor-pointer gap-2"
+            className="h-10 sm:h-11 px-3.5 sm:px-5 text-sm sm:text-base font-semibold cursor-pointer gap-2"
           >
             {isExporting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                <span>Mengunduh PDF...</span>
+                <span>Mengunduh...</span>
               </>
             ) : (
               <>
                 <FileDown className="size-4" />
-                <span>Ekspor Laporan PDF</span>
+                <span>Ekspor <span className="hidden sm:inline">Laporan</span> PDF</span>
               </>
             )}
           </Button>

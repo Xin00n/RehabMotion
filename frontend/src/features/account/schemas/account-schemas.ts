@@ -31,7 +31,8 @@ export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 
 export function toChangePasswordPayload(data: ChangePasswordFormData): ChangePasswordRequest {
   return {
-    old_password: data.old_password,
+    current_password: data.old_password,
     new_password: data.new_password,
+    old_password: data.old_password,
   }
 }

@@ -14,6 +14,7 @@ import {
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useAuth, authStore } from "@/features/auth/stores/auth-store"
 import { useClinicianPatients } from "@/features/patient/hooks/use-patient-data"
 import { PatientCard } from "@/features/patient/components/patient-card"
@@ -24,6 +25,16 @@ export default function ClinicianDashboardPage() {
   const { data: patients = [], isLoading, isError, refetch } = useClinicianPatients()
   const [searchQuery, setSearchQuery] = useState("")
   const [complianceFilter, setComplianceFilter] = useState<"all" | "attention" | "compliant">("all")
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false)
+  const [copiedEmail, setCopiedEmail] = useState(false)
+
+  const handleCopyEmail = () => {
+    if (user?.email) {
+      navigator.clipboard.writeText(user.email)
+      setCopiedEmail(true)
+      setTimeout(() => setCopiedEmail(false), 3000)
+    }
+  }
 
   const handleLogout = () => {
     authStore.clearAuth()
@@ -123,20 +134,16 @@ export default function ClinicianDashboardPage() {
             </p>
           </div>
 
-          {/* Tombol Utama "+ Pasien Baru" menggunakan --primary solid & text --primary-foreground */}
+          {/* Tombol Utama "+ Pasien Baru" */}
           <div className="shrink-0">
-            <Link
-              to="/patients/grant-access"
-              className={buttonVariants({
-                variant: "default",
-                size: "lg",
-                className:
-                  "cursor-pointer font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 rounded-xl shadow-xs transition-all",
-              })}
+            <Button
+              onClick={() => setShowAddPatientModal(true)}
+              size="lg"
+              className="cursor-pointer font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 rounded-xl shadow-xs transition-all"
             >
               <Plus className="size-5 shrink-0" />
               <span>+ Pasien Baru</span>
-            </Link>
+            </Button>
           </div>
         </div>
 
@@ -316,16 +323,13 @@ export default function ClinicianDashboardPage() {
                 </p>
               </div>
               <div className="pt-2">
-                <Link
-                  to="/patients/grant-access"
-                  className={buttonVariants({
-                    variant: "default",
-                    className: "bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2",
-                  })}
+                <Button
+                  onClick={() => setShowAddPatientModal(true)}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 cursor-pointer"
                 >
                   <Plus className="size-4" />
                   <span>Tambah Pasien Baru</span>
-                </Link>
+                </Button>
               </div>
             </div>
           )}
@@ -371,6 +375,90 @@ export default function ClinicianDashboardPage() {
       <footer className="max-w-6xl w-full mx-auto text-center py-6 text-sm text-muted-foreground border-t border-border">
         © {new Date().getFullYear()} RehabMotion — Portal Klinisi & Fisioterapi Pasca-Stroke
       </footer>
+
+      {/* Modal Panduan Hubungkan Pasien Baru */}
+      {showAddPatientModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border-2 border-border rounded-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <Users className="size-5 text-primary" />
+                  Hubungkan Pasien Baru
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Panduan menghubungkan pasien fisioterapi ke daftar klinis Anda.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddPatientModal(false)}
+                className="text-muted-foreground hover:text-foreground text-lg font-bold p-1 rounded-md cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-foreground/90 bg-muted/40 p-4 rounded-xl border border-border">
+              <p className="font-semibold text-foreground">
+                Sesuai prinsip privasi medis, pasien harus memberikan izin akses langsung dari akun mereka:
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>
+                  Berikan alamat email akun Fisioterapis Anda kepada pasien.
+                </li>
+                <li>
+                  Pasien masuk ke aplikasi dan membuka menu <strong className="text-foreground">Pengaturan Akun</strong>.
+                </li>
+                <li>
+                  Pada bagian <strong className="text-foreground">Daftar Pendamping & Fisioterapis</strong>, pasien memasukkan email Anda dan memilih role <strong className="text-foreground">Fisioterapis / Dokter</strong>.
+                </li>
+                <li>
+                  Setelah disimpan oleh pasien, nama dan rekam medis pasien akan langsung otomatis muncul di dashboard ini.
+                </li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Alamat Email Fisioterapis Anda:
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={user?.email || ""}
+                  className="font-mono text-sm bg-muted"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCopyEmail}
+                  className="cursor-pointer gap-1.5 shrink-0"
+                >
+                  {copiedEmail ? (
+                    <>
+                      <CheckCircle2 className="size-4 text-success" />
+                      <span>Tersalin!</span>
+                    </>
+                  ) : (
+                    <span>Salin Email</span>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                onClick={() => setShowAddPatientModal(false)}
+                className="cursor-pointer font-bold px-6 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Mengerti
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

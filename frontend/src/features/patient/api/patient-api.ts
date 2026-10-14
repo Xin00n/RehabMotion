@@ -41,7 +41,11 @@ export async function createPatientPrescription(
   patientId: number | string,
   data: CreatePrescriptionDto
 ): Promise<Prescription> {
-  return api.post<Prescription>(`/patients/${Number(patientId)}/prescriptions`, data)
+  const payload = {
+    ...data,
+    target_rom_deg: data.target_rom_deg ?? data.target_rom,
+  }
+  return api.post<Prescription>(`/patients/${Number(patientId)}/prescriptions`, payload)
 }
 
 export async function fetchPatientAccessList(patientId: number | string): Promise<CaregiverAccess[]> {

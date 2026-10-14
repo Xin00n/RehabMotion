@@ -80,19 +80,19 @@ export default function PatientDashboardPage() {
             className={buttonVariants({
               size: "lg",
               className:
-                "w-full min-h-20 sm:min-h-24 p-6 sm:p-8 flex items-center justify-between text-left rounded-2xl cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-all",
+                "w-full min-h-20 sm:min-h-24 p-4 sm:p-6 md:p-8 flex items-center justify-between text-left rounded-2xl cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-all gap-3",
             })}
           >
-            <div className="space-y-1">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight block">
+            <div className="space-y-1 min-w-0 flex-1">
+              <span className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight block truncate">
                 Mulai Latihan
               </span>
-              <span className="text-base sm:text-lg text-primary-foreground/80 block font-normal">
+              <span className="text-sm sm:text-base md:text-lg text-primary-foreground/80 block font-normal line-clamp-1 sm:line-clamp-none">
                 Lihat panduan dan mulai sesi fisioterapi hari ini
               </span>
             </div>
-            <div className="size-12 sm:size-14 rounded-full bg-primary-foreground text-primary flex items-center justify-center shrink-0 ml-4">
-              <Play className="size-6 sm:size-7 fill-current ml-0.5" />
+            <div className="size-10 sm:size-12 md:size-14 rounded-full bg-primary-foreground text-primary flex items-center justify-center shrink-0">
+              <Play className="size-5 sm:size-6 md:size-7 fill-current ml-0.5" />
             </div>
           </Link>
         </div>

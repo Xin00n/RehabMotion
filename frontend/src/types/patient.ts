@@ -94,6 +94,7 @@ export interface CreatePrescriptionDto {
   exercise_name: string
   affected_side: AffectedSide | string
   target_rom: number
+  target_rom_deg?: number
   target_repetitions: number
   target_sets: number
   notes?: string

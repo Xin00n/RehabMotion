@@ -55,13 +55,25 @@ export async function apiClient<T>(
 
       try {
         errorData = await response.json()
-        if (
-          errorData &&
-          typeof errorData === "object" &&
-          "detail" in errorData &&
-          typeof (errorData as { detail: unknown }).detail === "string"
-        ) {
-          errorMessage = (errorData as { detail: string }).detail
+        if (errorData && typeof errorData === "object" && "detail" in errorData) {
+          const detail = (errorData as { detail: unknown }).detail
+          if (typeof detail === "string") {
+            errorMessage = detail
+          } else if (Array.isArray(detail)) {
+            // Format FastAPI 422 validation errors array: [{loc: [...], msg: "..."}]
+            const messages = detail.map((errItem: any) => {
+              if (typeof errItem === "string") return errItem
+              if (errItem && typeof errItem === "object") {
+                const loc = Array.isArray(errItem.loc)
+                  ? errItem.loc.filter((l: any) => l !== "body").join(".")
+                  : ""
+                const msg = errItem.msg || "Input tidak valid"
+                return loc ? `${loc}: ${msg}` : msg
+              }
+              return "Input tidak valid"
+            })
+            errorMessage = messages.filter(Boolean).join(", ")
+          }
         }
       } catch {
         // Non-JSON response body

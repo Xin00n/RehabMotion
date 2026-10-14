@@ -2,10 +2,15 @@ import { Link } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
+import { useAuth } from "@/features/auth/stores/auth-store"
 import { UpdateProfileForm } from "@/features/account/components/update-profile-form"
 import { ChangePasswordForm } from "@/features/account/components/change-password-form"
+import { PatientAccessManager } from "@/features/account/components/patient-access-manager"
 
 export default function AccountPage() {
+  const { user } = useAuth()
+  const isPatient = user?.role === "patient"
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-4 sm:p-6 md:p-10">
       {/* Top Header */}
@@ -47,6 +52,19 @@ export default function AccountPage() {
           </div>
           <UpdateProfileForm />
         </section>
+
+        {/* Section Delegasi Akses Pendamping & Dokter (Khusus Pasien) */}
+        {isPatient && (
+          <section className="bg-card border-2 border-border rounded-xl p-6 sm:p-8 space-y-6">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-xl font-bold text-foreground">Daftar Pendamping & Fisioterapis</h2>
+              <p className="text-sm text-muted-foreground">
+                Beri izin kepada keluarga (caregiver) atau fisioterapis/dokter Anda untuk memantau perkembangan latihan.
+              </p>
+            </div>
+            <PatientAccessManager />
+          </section>
+        )}
 
         {/* Section Password */}
         <section className="bg-card border-2 border-border rounded-xl p-6 sm:p-8 space-y-6">

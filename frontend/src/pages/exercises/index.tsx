@@ -106,7 +106,11 @@ export default function ExercisesPage() {
             {prescriptions.map((item: Prescription) => {
               const exerciseName =
                 item.exercise?.name || item.exercise_name || "Latihan Pemulihan Gerak"
-              const targetRom = item.target_rom ? `${item.target_rom}°` : "Sesuai Toleransi"
+              const romVal = item.target_rom_deg ?? item.target_rom
+              const targetRom =
+                romVal !== undefined && romVal !== null && romVal !== ""
+                  ? `${romVal}°`
+                  : "Sesuai Toleransi"
               const affectedSide = formatAffectedSide(item.affected_side)
 
               return (
