@@ -8,11 +8,12 @@ export default function SessionPlayPage() {
   const { sessionId = "demo" } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
 
-  const prescriptionId = searchParams.get("prescription_id")
+  const rawPrescriptionId = searchParams.get("prescription_id")
+  const parsedPrescriptionId = rawPrescriptionId ? Number(rawPrescriptionId) : undefined
   const paramSide = (searchParams.get("side") as Side) || "right"
 
   const { data: prescriptions = [] } = usePatientPrescriptions(false)
-  const prescription = prescriptions.find((p: Prescription) => p.id === prescriptionId)
+  const prescription = prescriptions.find((p: Prescription) => p.id === parsedPrescriptionId)
 
   const side: Side =
     prescription?.affected_side === "left" || prescription?.affected_side === "right"

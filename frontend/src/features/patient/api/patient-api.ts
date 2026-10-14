@@ -9,53 +9,61 @@ import type {
 } from "@/types/patient"
 
 export async function fetchPatientPrescriptions(
-  patientId: string,
+  patientId: number | string,
   activeOnly = true
 ): Promise<Prescription[]> {
   const query = activeOnly ? "?active_only=true" : ""
-  return api.get<Prescription[]>(`/patients/${patientId}/prescriptions${query}`)
+  return api.get<Prescription[]>(`/patients/${Number(patientId)}/prescriptions${query}`)
 }
 
 export async function fetchPatientSessions(
-  patientId: string
+  patientId: number | string
 ): Promise<Session[]> {
-  return api.get<Session[]>(`/patients/${patientId}/sessions`)
+  return api.get<Session[]>(`/patients/${Number(patientId)}/sessions`)
 }
 
 export async function fetchCaregiverPatients(): Promise<Patient[]> {
   return api.get<Patient[]>("/patients")
 }
 
-export async function fetchPatientProfile(patientId: string): Promise<PatientProfile> {
-  return api.get<PatientProfile>(`/patients/${patientId}/profile`)
+export async function fetchPatientProfile(patientId: number | string): Promise<PatientProfile> {
+  return api.get<PatientProfile>(`/patients/${Number(patientId)}/profile`)
 }
 
 export async function updatePatientProfile(
-  patientId: string,
+  patientId: number | string,
   data: Partial<PatientProfile>
 ): Promise<PatientProfile> {
-  return api.patch<PatientProfile>(`/patients/${patientId}/profile`, data)
+  return api.patch<PatientProfile>(`/patients/${Number(patientId)}/profile`, data)
 }
 
 export async function createPatientPrescription(
-  patientId: string,
+  patientId: number | string,
   data: CreatePrescriptionDto
 ): Promise<Prescription> {
-  return api.post<Prescription>(`/patients/${patientId}/prescriptions`, data)
+  return api.post<Prescription>(`/patients/${Number(patientId)}/prescriptions`, data)
 }
 
-export async function fetchPatientAccessList(patientId: string): Promise<CaregiverAccess[]> {
-  return api.get<CaregiverAccess[]>(`/access?patient_id=${patientId}`)
+export async function fetchPatientAccessList(patientId: number | string): Promise<CaregiverAccess[]> {
+  return api.get<CaregiverAccess[]>(`/patients/${Number(patientId)}/access`)
 }
 
 export async function grantCaregiverAccess(data: {
-  patient_id: string
-  caregiver_email: string
+  patient_id: number | string
+  email: string
+  access_role?: "caregiver" | "clinician"
+  caregiver_email?: string
   notes?: string
 }): Promise<CaregiverAccess> {
-  return api.post<CaregiverAccess>("/access", data)
+  const patientId = Number(data.patient_id)
+  const email = data.email || data.caregiver_email || ""
+  const payload = {
+    email,
+    access_role: data.access_role || "caregiver",
+  }
+  return api.post<CaregiverAccess>(`/patients/${patientId}/access`, payload)
 }
 
-export async function revokeCaregiverAccess(accessId: string): Promise<void> {
-  return api.delete<void>(`/access/${accessId}`)
+export async function revokeCaregiverAccess(patientId: number | string, accessId: number | string): Promise<void> {
+  return api.delete<void>(`/patients/${Number(patientId)}/access/${Number(accessId)}`)
 }

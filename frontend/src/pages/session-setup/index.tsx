@@ -9,12 +9,13 @@ import type { Prescription } from "@/types/patient"
 
 export default function SessionSetupPage() {
   const { prescriptionId } = useParams<{ prescriptionId: string }>()
+  const parsedPrescriptionId = prescriptionId ? Number(prescriptionId) : undefined
   const navigate = useNavigate()
 
   // Ambil detail resep untuk nama latihan & default sisi terdampak
   const { data: prescriptions = [], isLoading: isLoadingPrescription } =
     usePatientPrescriptions(false)
-  const prescription = prescriptions.find((p: Prescription) => p.id === prescriptionId)
+  const prescription = prescriptions.find((p: Prescription) => p.id === parsedPrescriptionId)
 
   // Sisi terdampak (FR-1.2): default dari resep, dapat diubah manual oleh pengguna
   const defaultSide: "left" | "right" =
@@ -76,10 +77,19 @@ export default function SessionSetupPage() {
 
   const handleConfirmStartSession = async () => {
     if (!prescriptionId) return
+
+    // Ambil exercise_id dari relasi exercise pada prescription
+    const exerciseId = prescription?.exercise_id ?? prescription?.exercise?.id
+    if (!exerciseId) {
+      alert("Data latihan untuk resep ini tidak lengkap (exercise_id tidak ditemukan).")
+      return
+    }
+
     setIsCreatingSession(true)
     try {
       const newSession = await createSession({
-        prescription_id: prescriptionId,
+        exercise_id: exerciseId,
+        prescription_id: Number(prescriptionId),
         affected_side: selectedSide,
       })
       // Tutup stream kamera setup sebelum pindah ke player

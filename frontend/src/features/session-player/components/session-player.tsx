@@ -119,17 +119,32 @@ export function SessionPlayer({
     return () => clearInterval(interval)
   }, [flushBatchMeasurements])
 
-  // Selesai Sesi Normal
+  // Ref pelacakan repetisi dan peak ROM
+  const peakRomListRef = useRef<number[]>([])
+
+  // Selesai Sesi (completed / stopped)
   const handleFinishSession = useCallback(
-    async (notes?: string) => {
+    async (notes?: string, isEmergency = false) => {
       setIsFinishing(true)
-      audioCoach.speak("Sesi latihan selesai. Kerja luar biasa!", true)
+      audioCoach.speak(isEmergency ? "Sesi dihentikan." : "Sesi latihan selesai. Kerja luar biasa!", true)
       await flushBatchMeasurements()
+
+      // Kalkulasi peak ROM
+      const peaks = peakRomListRef.current
+      const maxPeak = peaks.length > 0 ? Math.max(...peaks) : currentAngle || 0
+      const avgPeak = peaks.length > 0 ? peaks.reduce((a, b) => a + b, 0) / peaks.length : currentAngle || 0
+
+      const totalReps = repContext.repsCompleted
+      const successfulReps = repContext.repsCompleted // Rep counter hanya increment saat repetisi sukses penuh
 
       try {
         await finishSession(sessionId, {
-          repetitions_completed: repContext.repsCompleted,
-          duration_seconds: elapsedSeconds,
+          status: isEmergency ? "stopped" : "completed",
+          total_repetitions: totalReps,
+          successful_repetitions: successfulReps,
+          average_peak_rom_deg: Number(avgPeak.toFixed(1)),
+          maximum_peak_rom_deg: Number(maxPeak.toFixed(1)),
+          stop_reason: isEmergency ? "pain_or_fatigue" : null,
           notes,
         })
       } catch {
@@ -138,15 +153,15 @@ export function SessionPlayer({
 
       // Berhenti audio & redirect
       audioCoach.stop()
-      navigate(`/dashboard?session_finished=true&reps=${repContext.repsCompleted}`)
+      navigate(`/dashboard?session_finished=true&reps=${totalReps}`)
     },
-    [flushBatchMeasurements, sessionId, repContext.repsCompleted, elapsedSeconds, navigate]
+    [flushBatchMeasurements, sessionId, repContext.repsCompleted, currentAngle, navigate]
   )
 
   // Emergency Stop / Nyeri (Task 9e / PRD Section 9)
   const handleEmergencyStop = () => {
     audioCoach.stop()
-    handleFinishSession("Dihentikan oleh pasien karena rasa nyeri atau kelelahan.")
+    handleFinishSession("Dihentikan oleh pasien karena rasa nyeri atau kelelahan.", true)
   }
 
   // Audio Feedback effect
@@ -254,8 +269,20 @@ export function SessionPlayer({
                       const now = Date.now()
                       const nextCtx = stepRepCounter(prevCtx, angle, now, repConfig)
 
+                      // Simpan peak ROM saat memasuki HOLD atau PEAK_CHECK
+                      if (nextCtx.state === "HOLD" || nextCtx.state === "PEAK_CHECK") {
+                        peakRomListRef.current.push(angle)
+                      }
+
                       // 3. Tambahkan ke batch buffer
                       measurementsBufferRef.current.push({
+                        angle_deg: Number(angle.toFixed(1)),
+                        affected_side: affectedSide,
+                        phase: nextCtx.state.toLowerCase(),
+                        target_reached: nextCtx.state === "HOLD" || nextCtx.state === "RETURN",
+                        measured_at: new Date(now).toISOString(),
+
+                        // State lokal frontend
                         timestamp_ms: now,
                         repetition_index: nextCtx.repsCompleted,
                         current_angle: angle,

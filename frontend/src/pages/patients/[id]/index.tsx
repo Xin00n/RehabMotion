@@ -263,8 +263,9 @@ export default function PatientDetailPage() {
     setIsGrantingAccess(true)
     try {
       await grantCaregiverAccess({
-        patient_id: patientId,
-        caregiver_email: grantEmail,
+        patient_id: Number(patientId),
+        email: grantEmail,
+        access_role: "caregiver",
         notes: grantNotes,
       })
       await queryClient.invalidateQueries({
@@ -290,7 +291,7 @@ export default function PatientDetailPage() {
 
     setIsRevoking(true)
     try {
-      await revokeCaregiverAccess(accessToRevoke.id)
+      await revokeCaregiverAccess(Number(patientId), accessToRevoke.id)
       await queryClient.invalidateQueries({
         queryKey: ["patients", patientId, "access"],
       })

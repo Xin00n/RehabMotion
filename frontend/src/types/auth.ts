@@ -3,7 +3,7 @@ export type UserRole = "patient" | "caregiver" | "clinician" | "admin"
 export type RegisterRole = "patient" | "caregiver"
 
 export interface User {
-  id: string
+  id: number
   email: string
   full_name: string
   role: UserRole

@@ -2,15 +2,15 @@ import { authStore } from "@/features/auth/stores/auth-store"
 import { api } from "@/lib/api-client"
 import type { RomTrendPoint } from "@/types/analytics"
 
-export async function fetchRomTrend(patientId: string): Promise<RomTrendPoint[]> {
-  return api.get<RomTrendPoint[]>(`/patients/${patientId}/analytics/rom-trend`)
+export async function fetchRomTrend(patientId: number | string): Promise<RomTrendPoint[]> {
+  return api.get<RomTrendPoint[]>(`/patients/${Number(patientId)}/analytics/rom-trend`)
 }
 
-export async function downloadSessionReportPdf(patientId: string): Promise<void> {
+export async function downloadSessionReportPdf(patientId: number | string): Promise<void> {
   const token = authStore.getAccessToken()
   const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api/v1"
   const baseUrl = rawBaseUrl.replace(/\/+$/, "")
-  const url = `${baseUrl}/patients/${patientId}/reports/sessions.pdf`
+  const url = `${baseUrl}/patients/${Number(patientId)}/reports/sessions.pdf`
 
   const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

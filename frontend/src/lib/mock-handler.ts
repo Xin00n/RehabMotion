@@ -11,7 +11,7 @@ import type { RomTrendPoint } from "@/types/analytics"
 // In-Memory Mock Store for Testing
 export const MOCK_USERS: Record<string, User> = {
   "pasien@rehabmotion.id": {
-    id: "patient-1",
+    id: 1,
     email: "pasien@rehabmotion.id",
     full_name: "Bpk. Budi Santoso",
     role: "patient",
@@ -19,7 +19,7 @@ export const MOCK_USERS: Record<string, User> = {
     created_at: "2026-09-01T08:00:00Z",
   },
   "caregiver@rehabmotion.id": {
-    id: "caregiver-1",
+    id: 2,
     email: "caregiver@rehabmotion.id",
     full_name: "Siti Rahayu (Caregiver)",
     role: "caregiver",
@@ -27,7 +27,7 @@ export const MOCK_USERS: Record<string, User> = {
     created_at: "2026-09-05T09:30:00Z",
   },
   "dokter@rehabmotion.id": {
-    id: "clinician-1",
+    id: 3,
     email: "dokter@rehabmotion.id",
     full_name: "dr. Hendra Sp.KFR",
     role: "clinician",
@@ -38,7 +38,7 @@ export const MOCK_USERS: Record<string, User> = {
 
 let mockPatients: Patient[] = [
   {
-    id: "patient-1",
+    id: 1,
     full_name: "Bpk. Budi Santoso",
     email: "pasien@rehabmotion.id",
     phone: "081234567890",
@@ -50,7 +50,7 @@ let mockPatients: Patient[] = [
     notes: "Pasien pasca-stroke iskemik 3 bulan lalu. Hemiparesis dekstra.",
   },
   {
-    id: "patient-2",
+    id: 2,
     full_name: "Ibu Ratna Wati",
     email: "ratna@gmail.com",
     phone: "081398765432",
@@ -62,7 +62,7 @@ let mockPatients: Patient[] = [
     notes: "Kelemahan motorik ekstremitas kiri atas.",
   },
   {
-    id: "patient-3",
+    id: 3,
     full_name: "Bpk. Joko Widodo",
     email: "joko.w@yahoo.com",
     phone: "081511223344",
@@ -77,11 +77,11 @@ let mockPatients: Patient[] = [
 
 let mockPrescriptions: Prescription[] = [
   {
-    id: "rx-1",
-    patient_id: "patient-1",
-    exercise_id: "ex-1",
+    id: 1,
+    patient_id: 1,
+    exercise_id: 1,
     exercise_name: "Fleksi Siku (Elbow Flexion)",
-    exercise: { id: "ex-1", name: "Fleksi Siku (Elbow Flexion)", target_rom: 90 },
+    exercise: { id: 1, name: "Fleksi Siku (Elbow Flexion)", target_rom: 90 },
     affected_side: "right",
     target_rom: 90,
     target_repetitions: 10,
@@ -90,11 +90,11 @@ let mockPrescriptions: Prescription[] = [
     created_at: "2026-10-01T08:00:00Z",
   },
   {
-    id: "rx-2",
-    patient_id: "patient-1",
-    exercise_id: "ex-2",
+    id: 2,
+    patient_id: 1,
+    exercise_id: 2,
     exercise_name: "Abduksi Bahu (Shoulder Abduction)",
-    exercise: { id: "ex-2", name: "Abduksi Bahu (Shoulder Abduction)", target_rom: 120 },
+    exercise: { id: 2, name: "Abduksi Bahu (Shoulder Abduction)", target_rom: 120 },
     affected_side: "right",
     target_rom: 120,
     target_repetitions: 10,
@@ -103,11 +103,11 @@ let mockPrescriptions: Prescription[] = [
     created_at: "2026-10-03T09:00:00Z",
   },
   {
-    id: "rx-3",
-    patient_id: "patient-1",
-    exercise_id: "ex-3",
+    id: 3,
+    patient_id: 1,
+    exercise_id: 3,
     exercise_name: "Ekstensi Lutut (Seated Knee Extension)",
-    exercise: { id: "ex-3", name: "Ekstensi Lutut (Seated Knee Extension)", target_rom: 110 },
+    exercise: { id: 3, name: "Ekstensi Lutut (Seated Knee Extension)", target_rom: 110 },
     affected_side: "right",
     target_rom: 110,
     target_repetitions: 8,
@@ -119,35 +119,50 @@ let mockPrescriptions: Prescription[] = [
 
 const mockSessions: Session[] = [
   {
-    id: "sess-1",
-    patient_id: "patient-1",
-    prescription_id: "rx-1",
+    id: 1,
+    patient_id: 1,
+    prescription_id: 1,
+    exercise_id: 1,
     exercise_name: "Fleksi Siku (Elbow Flexion)",
     repetitions_completed: 10,
+    total_repetitions: 10,
+    successful_repetitions: 10,
     target_repetitions: 10,
     avg_rom: 88,
+    average_peak_rom_deg: 88,
+    maximum_peak_rom_deg: 92,
     created_at: "2026-10-13T10:00:00Z",
     completed_at: "2026-10-13T10:15:00Z",
   },
   {
-    id: "sess-2",
-    patient_id: "patient-1",
-    prescription_id: "rx-2",
+    id: 2,
+    patient_id: 1,
+    prescription_id: 2,
+    exercise_id: 2,
     exercise_name: "Abduksi Bahu (Shoulder Abduction)",
     repetitions_completed: 10,
+    total_repetitions: 10,
+    successful_repetitions: 9,
     target_repetitions: 10,
     avg_rom: 115,
+    average_peak_rom_deg: 115,
+    maximum_peak_rom_deg: 122,
     created_at: "2026-10-12T14:00:00Z",
     completed_at: "2026-10-12T14:15:00Z",
   },
   {
-    id: "sess-3",
-    patient_id: "patient-1",
-    prescription_id: "rx-1",
+    id: 3,
+    patient_id: 1,
+    prescription_id: 1,
+    exercise_id: 1,
     exercise_name: "Fleksi Siku (Elbow Flexion)",
     repetitions_completed: 8,
+    total_repetitions: 10,
+    successful_repetitions: 8,
     target_repetitions: 10,
     avg_rom: 82,
+    average_peak_rom_deg: 82,
+    maximum_peak_rom_deg: 86,
     created_at: "2026-10-10T09:00:00Z",
     completed_at: "2026-10-10T09:15:00Z",
   },
@@ -164,19 +179,27 @@ const mockRomTrend: RomTrendPoint[] = [
 
 let mockAccessList: CaregiverAccess[] = [
   {
-    id: "access-1",
-    patient_id: "patient-1",
+    id: 1,
+    patient_id: 1,
+    accessor_id: 2,
     caregiver_name: "Siti Rahayu",
+    full_name: "Siti Rahayu",
+    email: "caregiver@rehabmotion.id",
     caregiver_email: "caregiver@rehabmotion.id",
+    access_role: "caregiver",
     status: "active",
     notes: "Anak kandung / Pendamping harian",
     granted_at: "2026-10-01T08:00:00Z",
   },
   {
-    id: "access-2",
-    patient_id: "patient-1",
+    id: 2,
+    patient_id: 1,
+    accessor_id: 4,
     caregiver_name: "Ahmad Fauzi",
+    full_name: "Ahmad Fauzi",
+    email: "ahmad@rehabmotion.id",
     caregiver_email: "ahmad@rehabmotion.id",
+    access_role: "caregiver",
     status: "pending",
     notes: "Caregiver pengganti",
     granted_at: "2026-10-10T14:00:00Z",
@@ -202,7 +225,7 @@ export function handleMockRequest<T>(
       const isCaregiver = email.includes("caregiver") || email.includes("pendamping")
       const role = isClinician ? "clinician" : isCaregiver ? "caregiver" : "patient"
       matchedUser = {
-        id: "user-" + Date.now(),
+        id: Date.now(),
         email: data.email,
         full_name: email.split("@")[0].toUpperCase(),
         role,
@@ -222,7 +245,7 @@ export function handleMockRequest<T>(
   if (cleanEndpoint === "/auth/register" && method === "POST") {
     const data = body as { email: string; full_name: string; role: "patient" | "caregiver" }
     const newUser: User = {
-      id: "user-" + Date.now(),
+      id: Date.now(),
       email: data.email,
       full_name: data.full_name,
       role: data.role || "patient",
@@ -260,7 +283,7 @@ export function handleMockRequest<T>(
 
   // 7. GET /patients/:id/profile
   if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/profile") && method === "GET") {
-    const patientId = cleanEndpoint.split("/")[2]
+    const patientId = Number(cleanEndpoint.split("/")[2])
     const p = mockPatients.find((item) => item.id === patientId) || mockPatients[0]
     const profile: PatientProfile = {
       id: p.id,
@@ -276,7 +299,7 @@ export function handleMockRequest<T>(
 
   // 8. PATCH /patients/:id/profile
   if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/profile") && method === "PATCH") {
-    const patientId = cleanEndpoint.split("/")[2]
+    const patientId = Number(cleanEndpoint.split("/")[2])
     const updates = body as Partial<PatientProfile>
     mockPatients = mockPatients.map((p) =>
       p.id === patientId ? { ...p, ...updates } : p
@@ -292,11 +315,12 @@ export function handleMockRequest<T>(
 
   // 10. POST /patients/:id/prescriptions
   if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/prescriptions") && method === "POST") {
-    const patientId = cleanEndpoint.split("/")[2]
+    const patientId = Number(cleanEndpoint.split("/")[2])
     const data = body as Partial<Prescription>
     const newRx: Prescription = {
-      id: "rx-" + Date.now(),
+      id: Date.now(),
       patient_id: patientId,
+      exercise_id: 1,
       exercise_name: data.exercise_name || "Latihan Baru",
       affected_side: data.affected_side || "right",
       target_rom: data.target_rom || 90,
@@ -322,7 +346,7 @@ export function handleMockRequest<T>(
   // 13. POST /sessions
   if (cleanEndpoint === "/sessions" && method === "POST") {
     return {
-      id: "session-" + Date.now(),
+      id: Date.now(),
       created_at: new Date().toISOString(),
     } as T
   }
@@ -337,30 +361,38 @@ export function handleMockRequest<T>(
     return { success: true, completed_at: new Date().toISOString() } as T
   }
 
-  // 16. GET /access
-  if (cleanEndpoint === "/access" && method === "GET") {
+  // 16. GET /patients/:id/access
+  if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/access") && method === "GET") {
     return [...mockAccessList] as T
   }
 
-  // 17. POST /access
-  if (cleanEndpoint === "/access" && method === "POST") {
-    const data = body as { patient_id: string; caregiver_email: string; notes?: string }
+  // 17. POST /patients/:id/access
+  if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/access") && method === "POST") {
+    const patientId = Number(cleanEndpoint.split("/")[2])
+    const data = body as { email?: string; access_role?: string; caregiver_email?: string; notes?: string }
+    const email = data.email || data.caregiver_email || "caregiver@example.com"
     const newAccess: CaregiverAccess = {
-      id: "access-" + Date.now(),
-      patient_id: data.patient_id,
-      caregiver_email: data.caregiver_email,
-      caregiver_name: data.caregiver_email.split("@")[0],
-      status: "pending",
-      notes: data.notes || "Ditambahkan oleh klinisi",
+      id: Date.now(),
+      patient_id: patientId,
+      accessor_id: Date.now() + 1,
+      email,
+      caregiver_email: email,
+      caregiver_name: email.split("@")[0],
+      full_name: email.split("@")[0],
+      access_role: data.access_role || "caregiver",
+      status: "active",
+      notes: data.notes || "Ditambahkan oleh klinisi/pasien",
       granted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     }
     mockAccessList = [newAccess, ...mockAccessList]
     return newAccess as T
   }
 
-  // 18. DELETE /access/:id
-  if (cleanEndpoint.startsWith("/access/") && method === "DELETE") {
-    const accessId = cleanEndpoint.split("/")[2]
+  // 18. DELETE /patients/:id/access/:access_id
+  if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.includes("/access/") && method === "DELETE") {
+    const parts = cleanEndpoint.split("/")
+    const accessId = Number(parts[4])
     mockAccessList = mockAccessList.filter((a) => a.id !== accessId)
     return undefined as T
   }

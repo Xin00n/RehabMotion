@@ -29,17 +29,17 @@ export function usePatientPrescriptions(activeOnly = true) {
   })
 }
 
-export function usePatientSessions(explicitPatientId?: string) {
+export function usePatientSessions(explicitPatientId?: number | string) {
   const { user } = useAuth()
-  const patientId = explicitPatientId || user?.id
+  const patientId = explicitPatientId !== undefined ? explicitPatientId : user?.id
 
   return useQuery<Session[], Error>({
     queryKey: ["patients", patientId, "sessions"],
     queryFn: () => {
-      if (!patientId) return Promise.resolve([])
+      if (patientId === undefined || patientId === null) return Promise.resolve([])
       return fetchPatientSessions(patientId)
     },
-    enabled: Boolean(patientId),
+    enabled: patientId !== undefined && patientId !== null,
   })
 }
 
@@ -114,24 +114,24 @@ export function useClinicianPatients() {
   })
 }
 
-export function usePatientProfile(patientId?: string) {
+export function usePatientProfile(patientId?: number | string) {
   return useQuery<PatientProfile, Error>({
     queryKey: ["patients", patientId, "profile"],
     queryFn: () => {
-      if (!patientId) throw new Error("Patient ID is required")
+      if (patientId === undefined || patientId === null) throw new Error("Patient ID is required")
       return fetchPatientProfile(patientId)
     },
-    enabled: Boolean(patientId),
+    enabled: patientId !== undefined && patientId !== null,
   })
 }
 
-export function usePatientAccessList(patientId?: string) {
+export function usePatientAccessList(patientId?: number | string) {
   return useQuery<CaregiverAccess[], Error>({
     queryKey: ["patients", patientId, "access"],
     queryFn: () => {
-      if (!patientId) return Promise.resolve([])
+      if (patientId === undefined || patientId === null) return Promise.resolve([])
       return fetchPatientAccessList(patientId)
     },
-    enabled: Boolean(patientId),
+    enabled: patientId !== undefined && patientId !== null,
   })
 }
