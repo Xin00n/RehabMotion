@@ -27,7 +27,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         db.add(PatientProfile(user_id=user.id))
     db.commit()
     db.refresh(user)
-    return TokenResponse(access_token=create_access_token(str(user.id), user.token_version), user=user)
+    return TokenResponse(access_token=create_access_token(str(user.id), user.token_version), user=UserOut.model_validate(user))
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -38,7 +38,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Email atau password salah", headers={"WWW-Authenticate": "Bearer"})
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Akun dinonaktifkan")
-    return TokenResponse(access_token=create_access_token(str(user.id), user.token_version), user=user)
+    return TokenResponse(access_token=create_access_token(str(user.id), user.token_version), user=UserOut.model_validate(user))
 
 
 @router.get("/me", response_model=UserOut)

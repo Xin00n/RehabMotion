@@ -1,14 +1,14 @@
 from datetime import date, datetime, time, timedelta, timezone
 from io import BytesIO
 from xml.sax.saxutils import escape
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors  # type: ignore[import-untyped]
+from reportlab.lib.enums import TA_CENTER  # type: ignore[import-untyped]
+from reportlab.lib.pagesizes import A4, landscape  # type: ignore[import-untyped]
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # type: ignore[import-untyped]
+from reportlab.lib.units import mm  # type: ignore[import-untyped]
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle  # type: ignore[import-untyped]
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
@@ -28,6 +28,8 @@ def export_sessions_pdf(
 ):
     require_patient_access(db, user, patient_id)
     patient = db.get(User, patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
     query = select(RehabSession).options(joinedload(RehabSession.exercise)).where(RehabSession.patient_id == patient_id)
     if start_date:
         query = query.where(RehabSession.started_at >= datetime.combine(start_date, time.min, tzinfo=timezone.utc))

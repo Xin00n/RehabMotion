@@ -1,5 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.database import get_db

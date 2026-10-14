@@ -1,11 +1,10 @@
-from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dependencies import get_current_user, require_role
-from app.models import PatientProfile, User, UserRole
+from app.dependencies import require_role
+from app.models import User, UserRole
 from app.schemas import AdminUserCreate, UserActiveUpdate, UserOut
 from app.security import hash_password
 

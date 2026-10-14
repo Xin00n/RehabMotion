@@ -18,8 +18,17 @@ def list_accessible_patients(user: User = Depends(get_current_user), db: Session
                                default_affected_side=profile.default_affected_side if profile else None)]
     if user.role == UserRole.ADMIN:
         patients = db.scalars(select(User).where(User.role == UserRole.PATIENT).order_by(User.full_name)).all()
-        return [PatientSummary(id=p.id, full_name=p.full_name, email=p.email, role=p.role,
-                               default_affected_side=(db.get(PatientProfile, p.id).default_affected_side if db.get(PatientProfile, p.id) else None)) for p in patients]
+        result: list[PatientSummary] = []
+        for p in patients:
+            prof = db.get(PatientProfile, p.id)
+            result.append(PatientSummary(
+                id=p.id,
+                full_name=p.full_name,
+                email=p.email,
+                role=p.role,
+                default_affected_side=prof.default_affected_side if prof else None,
+            ))
+        return result
     rows = db.execute(
         select(User, PatientAccess.access_role, PatientProfile.default_affected_side)
         .join(PatientAccess, PatientAccess.patient_id == User.id)

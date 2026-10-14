@@ -238,8 +238,3 @@ class ROMTrendPoint(BaseModel):
     average_peak_rom_deg: float | None
     best_peak_rom_deg: float | None
     successful_repetitions: int
-
-
-class ReportResponse(BaseModel):
-    filename: str
-    content_type: str = "application/pdf"

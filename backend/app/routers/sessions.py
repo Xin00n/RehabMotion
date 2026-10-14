@@ -108,8 +108,8 @@ def add_rom_measurements(session_id: int, payload: ROMMeasurementBatch, user: Us
         ))
     db.add_all(records)
     db.commit()
-    for item in records:
-        db.refresh(item)
+    for record in records:
+        db.refresh(record)
     return records
 
 
