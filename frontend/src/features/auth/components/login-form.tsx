@@ -73,17 +73,17 @@ export function LoginForm() {
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
           Pilih Cepat Akun Demo (Uji Coba Pengujian)
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => {
               setValue("email", "pasien@rehabmotion.id", { shouldValidate: true })
               setValue("password", "password123", { shouldValidate: true })
             }}
-            className="p-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
+            className="p-3 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
           >
-            <span className="font-bold text-xs text-primary block">👨‍🦳 Pasien</span>
-            <span className="text-[11px] text-muted-foreground truncate block">pasien@rehabmotion.id</span>
+            <span className="font-bold text-sm text-primary block">👨‍🦳 Akun Pasien Mandiri</span>
+            <span className="text-xs text-muted-foreground truncate block">pasien@rehabmotion.id</span>
           </button>
 
           <button
@@ -92,22 +92,10 @@ export function LoginForm() {
               setValue("email", "dokter@rehabmotion.id", { shouldValidate: true })
               setValue("password", "password123", { shouldValidate: true })
             }}
-            className="p-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
+            className="p-3 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
           >
-            <span className="font-bold text-xs text-primary block">🩺 Fisioterapis</span>
-            <span className="text-[11px] text-muted-foreground truncate block">dokter@rehabmotion.id</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setValue("email", "jarjit@gmail.com", { shouldValidate: true })
-              setValue("password", "password123", { shouldValidate: true })
-            }}
-            className="p-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
-          >
-            <span className="font-bold text-xs text-primary block">👤 Pasien (Jarjit)</span>
-            <span className="text-[11px] text-muted-foreground truncate block">jarjit@gmail.com</span>
+            <span className="font-bold text-sm text-primary block">🩺 Akun Fisioterapis / Dokter</span>
+            <span className="text-xs text-muted-foreground truncate block">dokter@rehabmotion.id</span>
           </button>
         </div>
       </div>

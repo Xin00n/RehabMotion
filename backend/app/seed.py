@@ -1,7 +1,18 @@
 from datetime import date
 from sqlalchemy import delete, select
 from app.database import SessionLocal
-from app.models import AccessRole, AffectedSide, Exercise, PatientAccess, PatientProfile, Prescription, User, UserRole
+from app.models import (
+    AccessRole,
+    AffectedSide,
+    Exercise,
+    PatientAccess,
+    PatientProfile,
+    Prescription,
+    RehabSession,
+    ROMMeasurement,
+    User,
+    UserRole,
+)
 from app.security import hash_password
 
 EXERCISES = [
@@ -61,12 +72,6 @@ def seed_demo_users() -> None:
             "role": UserRole.CLINICIAN,
             "password": "password123",
         },
-        {
-            "email": "jarjit@gmail.com",
-            "full_name": "Jarjit Singh",
-            "role": UserRole.PATIENT,
-            "password": "password123",
-        },
     ]
 
     with SessionLocal() as db:
@@ -75,6 +80,19 @@ def seed_demo_users() -> None:
         if demo_caregiver:
             db.execute(delete(PatientAccess).where(PatientAccess.accessor_id == demo_caregiver.id))
             db.delete(demo_caregiver)
+            db.commit()
+
+        # Cleanup jarjit if present in persistent DB
+        demo_jarjit = db.scalar(select(User).where(User.email == "jarjit@gmail.com"))
+        if demo_jarjit:
+            session_ids = db.scalars(select(RehabSession.id).where(RehabSession.patient_id == demo_jarjit.id)).all()
+            if session_ids:
+                db.execute(delete(ROMMeasurement).where(ROMMeasurement.session_id.in_(session_ids)))
+                db.execute(delete(RehabSession).where(RehabSession.id.in_(session_ids)))
+            db.execute(delete(Prescription).where(Prescription.patient_id == demo_jarjit.id))
+            db.execute(delete(PatientAccess).where((PatientAccess.patient_id == demo_jarjit.id) | (PatientAccess.accessor_id == demo_jarjit.id)))
+            db.execute(delete(PatientProfile).where(PatientProfile.user_id == demo_jarjit.id))
+            db.delete(demo_jarjit)
             db.commit()
 
         user_map = {}
@@ -105,44 +123,37 @@ def seed_demo_users() -> None:
         db.commit()
 
         pasien = user_map.get("pasien@rehabmotion.id")
-        jarjit = user_map.get("jarjit@gmail.com")
         dokter = user_map.get("dokter@rehabmotion.id")
 
-        for patient_obj in [pasien, jarjit]:
-            if not patient_obj:
-                continue
-            if dokter:
-                has_access = db.scalar(
-                    select(PatientAccess).where(
-                        PatientAccess.patient_id == patient_obj.id,
-                        PatientAccess.accessor_id == dokter.id,
-                    )
+        if pasien and dokter:
+            has_access = db.scalar(
+                select(PatientAccess).where(
+                    PatientAccess.patient_id == pasien.id,
+                    PatientAccess.accessor_id == dokter.id,
                 )
-                if not has_access:
-                    db.add(PatientAccess(patient_id=patient_obj.id, accessor_id=dokter.id, access_role=AccessRole.CLINICIAN))
+            )
+            if not has_access:
+                db.add(PatientAccess(patient_id=pasien.id, accessor_id=dokter.id, access_role=AccessRole.CLINICIAN))
 
         exercise = db.scalar(select(Exercise).where(Exercise.code == "elbow-flexion"))
-        if exercise and dokter:
-            for patient_obj in [pasien, jarjit]:
-                if not patient_obj:
-                    continue
-                rx = db.scalar(select(Prescription).where(Prescription.patient_id == patient_obj.id, Prescription.is_active == True))
-                if not rx:
-                    db.add(
-                        Prescription(
-                            patient_id=patient_obj.id,
-                            clinician_id=dokter.id,
-                            exercise_id=exercise.id,
-                            affected_side=AffectedSide.RIGHT,
-                            target_rom_deg=90.0,
-                            rom_margin_deg=10.0,
-                            hold_seconds=2.0,
-                            target_repetitions=10,
-                            starts_on=date.today(),
-                            notes="Latihan fleksi siku mandiri teratur.",
-                            is_active=True,
-                        )
+        if exercise and dokter and pasien:
+            rx = db.scalar(select(Prescription).where(Prescription.patient_id == pasien.id, Prescription.is_active == True))
+            if not rx:
+                db.add(
+                    Prescription(
+                        patient_id=pasien.id,
+                        clinician_id=dokter.id,
+                        exercise_id=exercise.id,
+                        affected_side=AffectedSide.RIGHT,
+                        target_rom_deg=90.0,
+                        rom_margin_deg=10.0,
+                        hold_seconds=2.0,
+                        target_repetitions=10,
+                        starts_on=date.today(),
+                        notes="Latihan fleksi siku mandiri teratur.",
+                        is_active=True,
                     )
+                )
         db.commit()
 
 
