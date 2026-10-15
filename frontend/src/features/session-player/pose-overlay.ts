@@ -38,19 +38,19 @@ const getCssToken = (tokenName: string, fallback: string): string => {
 
 export function getSkeletonColor(state: RepCounterState, isCompensated: boolean): string {
   if (isCompensated) {
-    return getCssToken("--danger", "#A8483A") // Terracotta: Kompensasi gerak
+    return "#ef4444" // Merah terang: Kompensasi gerak
   }
   switch (state) {
     case "PEAK_CHECK":
     case "HOLD":
-      return getCssToken("--success", "#4C7A5D") // Hijau lembut: Target ROM tercapai / Sedang ditahan
+      return "#10b981" // Hijau cerah: Target ROM tercapai / Sedang ditahan
     case "MOVING":
-      return getCssToken("--warning", "#B98B3E") // Mustard pudar: Bergerak menuju target
+      return "#f59e0b" // Kuning amber: Bergerak menuju target
     case "RETURN":
-      return getCssToken("--primary", "#2F4A3C") // Hijau hutan gelap: Bergerak kembali
+      return "#3b82f6" // Biru: Bergerak kembali
     case "STATE_START":
     default:
-      return getCssToken("--text-muted", "#6B6558") // Netral / Abu-abu hangat: Posisi awal
+      return getCssToken("--text-muted", "#888888") // Netral: Posisi awal
   }
 }
 
@@ -61,7 +61,8 @@ export function drawPoseSkeleton(
   canvasHeight: number,
   state: RepCounterState,
   isCompensated: boolean,
-  activeIndices?: [number, number, number]
+  activeIndices?: [number, number, number],
+  currentAngle?: number
 ) {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
@@ -70,7 +71,6 @@ export function drawPoseSkeleton(
   const mainColor = getSkeletonColor(state, isCompensated)
 
   // 1. Gambar garis koneksi skeleton
-  ctx.lineWidth = 4
   ctx.lineCap = "round"
 
   for (const [startIdx, endIdx] of POSE_CONNECTIONS) {
@@ -93,7 +93,7 @@ export function drawPoseSkeleton(
         (activeIndices[1] === startIdx && activeIndices[0] === endIdx) ||
         (activeIndices[2] === startIdx && activeIndices[1] === endIdx))
 
-    ctx.strokeStyle = isActiveConnection ? mainColor : "rgba(220, 213, 196, 0.6)"
+    ctx.strokeStyle = isActiveConnection ? mainColor : "rgba(255, 255, 255, 0.45)"
     ctx.lineWidth = isActiveConnection ? 6 : 3
 
     ctx.beginPath()
@@ -111,14 +111,66 @@ export function drawPoseSkeleton(
     const py = point.y * canvasHeight
 
     const isActiveJoint = activeIndices && activeIndices.includes(i)
+    const isVertexJoint = activeIndices && activeIndices[1] === i
 
     ctx.beginPath()
-    ctx.arc(px, py, isActiveJoint ? 8 : 4, 0, 2 * Math.PI)
+    ctx.arc(px, py, isVertexJoint ? 10 : isActiveJoint ? 7 : 4, 0, 2 * Math.PI)
 
-    ctx.fillStyle = isActiveJoint ? mainColor : getCssToken("--bg", "#FAF8F2")
+    ctx.fillStyle = isActiveJoint ? mainColor : "#ffffff"
     ctx.fill()
-    ctx.strokeStyle = getCssToken("--surface-dark", "#1F3326")
+    ctx.strokeStyle = "#111111"
     ctx.lineWidth = 2
     ctx.stroke()
+
+    // Cincin bercahaya di sekitar vertex joint
+    if (isVertexJoint) {
+      ctx.beginPath()
+      ctx.arc(px, py, 15, 0, 2 * Math.PI)
+      ctx.strokeStyle = mainColor
+      ctx.lineWidth = 2.5
+      ctx.stroke()
+    }
+  }
+
+  // 3. Gambar badge angka sudut sendi aktif
+  if (activeIndices && currentAngle !== undefined && currentAngle !== null && !isNaN(currentAngle)) {
+    const vertexPoint = landmarks[activeIndices[1]]
+    if (vertexPoint && (vertexPoint.visibility ?? 1) >= 0.35) {
+      const vx = vertexPoint.x * canvasWidth
+      const vy = vertexPoint.y * canvasHeight
+
+      const text = `${Math.round(currentAngle)}°`
+      const boxW = 54
+      const boxH = 26
+
+      ctx.save()
+      // Pindahkan origin ke posisi badge
+      const rawX = vx + 16
+      const rawY = vy - 16
+      const safeX = Math.min(canvasWidth - boxW - 8, Math.max(8, rawX))
+      const safeY = Math.min(canvasHeight - boxH - 8, Math.max(8, rawY))
+
+      // Un-mirror secara horizontal di posisi badge karena canvas memiliki CSS -scale-x-100
+      ctx.translate(safeX + boxW / 2, safeY + boxH / 2)
+      ctx.scale(-1, 1)
+
+      // Background badge
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)"
+      ctx.beginPath()
+      ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 6)
+      ctx.fill()
+      ctx.strokeStyle = mainColor
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      // Teks sudut
+      ctx.font = "bold 14px system-ui, sans-serif"
+      ctx.fillStyle = "#ffffff"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText(text, 0, 1)
+
+      ctx.restore()
+    }
   }
 }

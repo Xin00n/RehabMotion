@@ -123,7 +123,7 @@ export default function SessionSetupPage() {
       if (cameraStream) {
         cameraStream.getTracks().forEach((t) => t.stop())
       }
-      navigate(`/session-play/${newSession.id}`)
+      navigate(`/session-play/${newSession.id}?prescription_id=${prescriptionId}&side=${selectedSide}`)
     } catch {
       // Fallback jika backend offline: tetap masuk ke session-play dengan mock ID
       if (cameraStream) {

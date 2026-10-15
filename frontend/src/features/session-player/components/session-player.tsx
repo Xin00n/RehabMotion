@@ -6,6 +6,8 @@ import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2 
 import { Button } from "@/components/ui/button"
 import {
   calculateExerciseAngle,
+  detectPostureCompensation,
+  AngleSmoother,
   EXERCISE_LANDMARK_MAP,
   normalizeExerciseType,
   type Side,
@@ -13,6 +15,7 @@ import {
 import {
   createInitialRepCounterContext,
   stepRepCounter,
+  getExerciseMotionConfig,
   type RepCounterConfig,
   type RepCounterContext,
 } from "@/features/session-player/rep-counter"
@@ -52,6 +55,7 @@ export function SessionPlayer({
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const isSessionFinishedRef = useRef(false)
   const currentAngleRef = useRef<number>(0)
+  const angleSmootherRef = useRef<AngleSmoother>(new AngleSmoother(0.35))
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
@@ -86,10 +90,11 @@ export function SessionPlayer({
     resolvedExerciseTypeRef.current = resolvedExerciseType
   }, [resolvedExerciseType])
 
-  const affectedSideRef = useRef(affectedSide)
+  const safeSide: Side = affectedSide === "left" ? "left" : "right"
+  const affectedSideRef = useRef(safeSide)
   useEffect(() => {
-    affectedSideRef.current = affectedSide
-  }, [affectedSide])
+    affectedSideRef.current = safeSide
+  }, [safeSide])
 
   const targetRepsRef = useRef(targetReps)
   useEffect(() => {
@@ -101,22 +106,14 @@ export function SessionPlayer({
     targetRomRef.current = targetRom
   }, [targetRom])
 
-  const activeIndices = EXERCISE_LANDMARK_MAP[resolvedExerciseType]?.[affectedSide]
+  const activeIndices = EXERCISE_LANDMARK_MAP[resolvedExerciseType]?.[safeSide]
   const activeIndicesRef = useRef(activeIndices)
   useEffect(() => {
     activeIndicesRef.current = activeIndices
   }, [activeIndices])
 
   const repConfig: RepCounterConfig = useMemo(
-    () => ({
-      baselineAngle: resolvedExerciseType === "shoulder_abduction" ? 20 : 160,
-      targetRom: targetRom,
-      isDecreasingTarget: resolvedExerciseType === "elbow_flexion",
-      startThresholdDeg: 15,
-      targetToleranceDeg: 12,
-      returnToleranceDeg: 18,
-      holdDurationMs: 2000,
-    }),
+    () => getExerciseMotionConfig(resolvedExerciseType, targetRom),
     [resolvedExerciseType, targetRom]
   )
   const repConfigRef = useRef(repConfig)
@@ -345,6 +342,7 @@ export function SessionPlayer({
                 if (ctx) {
                   const width = canvas.width
                   const height = canvas.height
+                  const aspectRatio = width / (height || 1)
 
                   if (
                     results.landmarks &&
@@ -353,23 +351,30 @@ export function SessionPlayer({
                   ) {
                     setIsPoseReady(true)
                     const landmarks = results.landmarks[0]
+                    const worldLandmarks = (results as any).worldLandmarks?.[0]
                     const currentType = resolvedExerciseTypeRef.current
                     const currentSide = affectedSideRef.current
                     const currentIndices = activeIndicesRef.current
                     const currentTargetReps = targetRepsRef.current
                     const currentTargetRom = targetRomRef.current
 
-                    // 1. Hitung sudut sendi aktif
-                    const angle = calculateExerciseAngle(landmarks, currentType, currentSide)
+                    // 1. Hitung sudut sendi aktif (menggunakan 3D worldLandmarks / aspect-ratio corrected 2D)
+                    const rawAngle = calculateExerciseAngle(landmarks, currentType, currentSide, aspectRatio, worldLandmarks)
 
-                    if (angle !== null) {
+                    if (rawAngle !== null) {
+                      // 2. Terapkan smoothing adaptif anti-jitter
+                      const angle = angleSmootherRef.current.update(rawAngle)
                       currentAngleRef.current = angle
                       setCurrentAngle(angle)
 
-                      // 2. Step state machine
+                      // 3. Deteksi kompensasi postur tubuh
+                      const compensation = detectPostureCompensation(landmarks)
+                      const isCompensated = compensation.isCompensated
+
+                      // 4. Step state machine
                       const now = Date.now()
                       const prevCtx = repContextRef.current
-                      const nextCtx = stepRepCounter(prevCtx, angle, now, repConfigRef.current)
+                      const nextCtx = stepRepCounter(prevCtx, angle, now, repConfigRef.current, isCompensated)
                       repContextRef.current = nextCtx
                       setRepContext(nextCtx)
 
@@ -378,7 +383,7 @@ export function SessionPlayer({
                         peakRomListRef.current.push(angle)
                       }
 
-                      // 3. Tambahkan ke batch buffer
+                      // 5. Tambahkan ke batch buffer
                       measurementsBufferRef.current.push({
                         angle_deg: Number(angle.toFixed(1)),
                         affected_side: currentSide,
@@ -403,18 +408,29 @@ export function SessionPlayer({
                           handleFinishSessionRef.current("Target repetisi berhasil diselesaikan penuh.")
                         }, 1200)
                       }
-                    }
 
-                    // 4. Render skeleton overlay
-                    drawPoseSkeleton(
-                      ctx,
-                      landmarks,
-                      width,
-                      height,
-                      repContextRef.current.state,
-                      repContextRef.current.isCompensated,
-                      currentIndices
-                    )
+                      // 6. Render skeleton overlay dengan live angle badge pada vertex joint
+                      drawPoseSkeleton(
+                        ctx,
+                        landmarks,
+                        width,
+                        height,
+                        nextCtx.state,
+                        nextCtx.isCompensated,
+                        currentIndices,
+                        angle
+                      )
+                    } else {
+                      drawPoseSkeleton(
+                        ctx,
+                        landmarks,
+                        width,
+                        height,
+                        repContextRef.current.state,
+                        repContextRef.current.isCompensated,
+                        currentIndices
+                      )
+                    }
                   } else {
                     ctx.clearRect(0, 0, width, height)
                   }
