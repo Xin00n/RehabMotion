@@ -55,7 +55,7 @@ export async function fetchPatientAccessList(patientId: number | string): Promis
 export async function grantCaregiverAccess(data: {
   patient_id: number | string
   email: string
-  access_role?: "caregiver" | "clinician"
+  access_role?: "clinician"
   caregiver_email?: string
   notes?: string
 }): Promise<CaregiverAccess> {
@@ -63,7 +63,7 @@ export async function grantCaregiverAccess(data: {
   const email = data.email || data.caregiver_email || ""
   const payload = {
     email,
-    access_role: data.access_role || "caregiver",
+    access_role: data.access_role || "clinician",
   }
   return api.post<CaregiverAccess>(`/patients/${patientId}/access`, payload)
 }

@@ -73,7 +73,7 @@ export function LoginForm() {
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
           Pilih Cepat Akun Demo (Uji Coba Pengujian)
         </span>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => {
@@ -84,18 +84,6 @@ export function LoginForm() {
           >
             <span className="font-bold text-xs text-primary block">👨‍🦳 Pasien</span>
             <span className="text-[11px] text-muted-foreground truncate block">pasien@rehabmotion.id</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setValue("email", "caregiver@rehabmotion.id", { shouldValidate: true })
-              setValue("password", "password123", { shouldValidate: true })
-            }}
-            className="p-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
-          >
-            <span className="font-bold text-xs text-primary block">🤝 Caregiver</span>
-            <span className="text-[11px] text-muted-foreground truncate block">caregiver@rehabmotion.id</span>
           </button>
 
           <button
@@ -118,7 +106,7 @@ export function LoginForm() {
             }}
             className="p-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
           >
-            <span className="font-bold text-xs text-primary block">👤 Jarjit</span>
+            <span className="font-bold text-xs text-primary block">👤 Pasien (Jarjit)</span>
             <span className="text-[11px] text-muted-foreground truncate block">jarjit@gmail.com</span>
           </button>
         </div>

@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from app.database import SessionLocal
 from app.models import AccessRole, AffectedSide, Exercise, PatientAccess, PatientProfile, Prescription, User, UserRole
 from app.security import hash_password
@@ -56,12 +56,6 @@ def seed_demo_users() -> None:
             "password": "password123",
         },
         {
-            "email": "caregiver@rehabmotion.id",
-            "full_name": "Siti Rahma (Caregiver)",
-            "role": UserRole.CAREGIVER,
-            "password": "password123",
-        },
-        {
             "email": "dokter@rehabmotion.id",
             "full_name": "dr. Andi Pratama, Sp.KFR",
             "role": UserRole.CLINICIAN,
@@ -76,6 +70,13 @@ def seed_demo_users() -> None:
     ]
 
     with SessionLocal() as db:
+        # Cleanup any existing demo caregiver from persistent DB
+        demo_caregiver = db.scalar(select(User).where(User.email == "caregiver@rehabmotion.id"))
+        if demo_caregiver:
+            db.execute(delete(PatientAccess).where(PatientAccess.accessor_id == demo_caregiver.id))
+            db.delete(demo_caregiver)
+            db.commit()
+
         user_map = {}
         for item in demo_users:
             user = db.scalar(select(User).where(User.email == item["email"]))
@@ -105,22 +106,11 @@ def seed_demo_users() -> None:
 
         pasien = user_map.get("pasien@rehabmotion.id")
         jarjit = user_map.get("jarjit@gmail.com")
-        caregiver = user_map.get("caregiver@rehabmotion.id")
         dokter = user_map.get("dokter@rehabmotion.id")
 
         for patient_obj in [pasien, jarjit]:
             if not patient_obj:
                 continue
-            if caregiver:
-                has_access = db.scalar(
-                    select(PatientAccess).where(
-                        PatientAccess.patient_id == patient_obj.id,
-                        PatientAccess.accessor_id == caregiver.id,
-                    )
-                )
-                if not has_access:
-                    db.add(PatientAccess(patient_id=patient_obj.id, accessor_id=caregiver.id, access_role=AccessRole.CAREGIVER))
-
             if dokter:
                 has_access = db.scalar(
                     select(PatientAccess).where(

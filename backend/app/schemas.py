@@ -12,14 +12,14 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=10, max_length=128)
-    role: Literal[UserRole.PATIENT, UserRole.CAREGIVER] = UserRole.PATIENT
+    role: Literal[UserRole.PATIENT] = UserRole.PATIENT
 
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=10, max_length=128)
-    role: Literal[UserRole.CAREGIVER, UserRole.CLINICIAN]
+    role: Literal[UserRole.CLINICIAN] = UserRole.CLINICIAN
 
 
 class UserProfileUpdate(BaseModel):
@@ -106,7 +106,7 @@ class PatientSummary(BaseModel):
 
 class AccessCreate(BaseModel):
     email: EmailStr
-    access_role: AccessRole
+    access_role: AccessRole = AccessRole.CLINICIAN
 
 
 class AccessOut(BaseModel):

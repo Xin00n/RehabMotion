@@ -18,14 +18,6 @@ export const MOCK_USERS: Record<string, User> = {
     is_active: true,
     created_at: "2026-09-01T08:00:00Z",
   },
-  "caregiver@rehabmotion.id": {
-    id: 2,
-    email: "caregiver@rehabmotion.id",
-    full_name: "Siti Rahayu (Caregiver)",
-    role: "caregiver",
-    is_active: true,
-    created_at: "2026-09-05T09:30:00Z",
-  },
   "dokter@rehabmotion.id": {
     id: 3,
     email: "dokter@rehabmotion.id",
@@ -71,7 +63,7 @@ let mockPatients: Patient[] = [
     last_session_at: "2026-10-08T09:00:00Z",
     compliance_rate: 35,
     compliance_status: "poor",
-    notes: "Perlu pendampingan intensif dari caregiver.",
+    notes: "Perlu pendampingan fisioterapi intensif.",
   },
 ]
 
@@ -181,28 +173,15 @@ let mockAccessList: CaregiverAccess[] = [
   {
     id: 1,
     patient_id: 1,
-    accessor_id: 2,
-    caregiver_name: "Siti Rahayu",
-    full_name: "Siti Rahayu",
-    email: "caregiver@rehabmotion.id",
-    caregiver_email: "caregiver@rehabmotion.id",
-    access_role: "caregiver",
+    accessor_id: 3,
+    caregiver_name: "dr. Hendra Sp.KFR",
+    full_name: "dr. Hendra Sp.KFR",
+    email: "dokter@rehabmotion.id",
+    caregiver_email: "dokter@rehabmotion.id",
+    access_role: "clinician",
     status: "active",
-    notes: "Anak kandung / Pendamping harian",
+    notes: "Fisioterapis penanggung jawab",
     granted_at: "2026-10-01T08:00:00Z",
-  },
-  {
-    id: 2,
-    patient_id: 1,
-    accessor_id: 4,
-    caregiver_name: "Ahmad Fauzi",
-    full_name: "Ahmad Fauzi",
-    email: "ahmad@rehabmotion.id",
-    caregiver_email: "ahmad@rehabmotion.id",
-    access_role: "caregiver",
-    status: "pending",
-    notes: "Caregiver pengganti",
-    granted_at: "2026-10-10T14:00:00Z",
   },
 ]
 
@@ -222,8 +201,7 @@ export function handleMockRequest<T>(
     if (!matchedUser) {
       // Buat session dinamis sesuai domain/nama jika email lain
       const isClinician = email.includes("dokter") || email.includes("fisioterapis")
-      const isCaregiver = email.includes("caregiver") || email.includes("pendamping")
-      const role = isClinician ? "clinician" : isCaregiver ? "caregiver" : "patient"
+      const role = isClinician ? "clinician" : "patient"
       matchedUser = {
         id: Date.now(),
         email: data.email,
@@ -243,12 +221,12 @@ export function handleMockRequest<T>(
 
   // 2. POST /auth/register
   if (cleanEndpoint === "/auth/register" && method === "POST") {
-    const data = body as { email: string; full_name: string; role: "patient" | "caregiver" }
+    const data = body as { email: string; full_name: string; role?: "patient" }
     const newUser: User = {
       id: Date.now(),
       email: data.email,
       full_name: data.full_name,
-      role: data.role || "patient",
+      role: "patient",
       is_active: true,
       created_at: new Date().toISOString(),
     }
@@ -370,7 +348,7 @@ export function handleMockRequest<T>(
   if (cleanEndpoint.startsWith("/patients/") && cleanEndpoint.endsWith("/access") && method === "POST") {
     const patientId = Number(cleanEndpoint.split("/")[2])
     const data = body as { email?: string; access_role?: string; caregiver_email?: string; notes?: string }
-    const email = data.email || data.caregiver_email || "caregiver@example.com"
+    const email = data.email || data.caregiver_email || "dokter@example.com"
     const newAccess: CaregiverAccess = {
       id: Date.now(),
       patient_id: patientId,
@@ -379,9 +357,9 @@ export function handleMockRequest<T>(
       caregiver_email: email,
       caregiver_name: email.split("@")[0],
       full_name: email.split("@")[0],
-      access_role: data.access_role || "caregiver",
+      access_role: data.access_role || "clinician",
       status: "active",
-      notes: data.notes || "Ditambahkan oleh klinisi/pasien",
+      notes: data.notes || "Ditambahkan oleh pasien",
       granted_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     }

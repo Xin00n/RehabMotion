@@ -17,9 +17,7 @@ export const registerSchema = z
     confirmPassword: z
       .string()
       .min(1, "Konfirmasi password harus diisi"),
-    role: z.enum(["patient", "caregiver"], {
-      message: "Pilih peran Anda (Pasien atau Pendamping)",
-    }),
+    role: z.literal("patient"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Konfirmasi password tidak cocok",

@@ -4,7 +4,6 @@ import RegisterPage from "@/pages/auth/register"
 import LoginPage from "@/pages/auth/login"
 import DashboardPage from "@/pages/dashboard"
 import PatientDashboardPage from "@/pages/dashboard/patient"
-import CaregiverDashboardPage from "@/pages/dashboard/caregiver"
 import ClinicianDashboardPage from "@/pages/dashboard/clinician"
 import ExercisesPage from "@/pages/exercises"
 import SessionSetupPage from "@/pages/session-setup"
@@ -20,9 +19,6 @@ function DashboardIndexRoute() {
   const { user } = useAuth()
   if (user?.role === "patient") {
     return <PatientDashboardPage />
-  }
-  if (user?.role === "caregiver") {
-    return <CaregiverDashboardPage />
   }
   if (user?.role === "clinician") {
     return <ClinicianDashboardPage />
@@ -63,14 +59,6 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/dashboard/caregiver",
-    element: (
-      <ProtectedRoute allowedRoles={["caregiver"]}>
-        <CaregiverDashboardPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: "/dashboard/clinician",
     element: (
       <ProtectedRoute allowedRoles={["clinician"]}>
@@ -81,7 +69,7 @@ export const router = createBrowserRouter([
   {
     path: "/exercises",
     element: (
-      <ProtectedRoute allowedRoles={["patient", "caregiver"]}>
+      <ProtectedRoute allowedRoles={["patient"]}>
         <ExercisesPage />
       </ProtectedRoute>
     ),
@@ -89,7 +77,7 @@ export const router = createBrowserRouter([
   {
     path: "/session-setup/:prescriptionId",
     element: (
-      <ProtectedRoute allowedRoles={["patient", "caregiver"]}>
+      <ProtectedRoute allowedRoles={["patient"]}>
         <SessionSetupPage />
       </ProtectedRoute>
     ),
@@ -97,7 +85,7 @@ export const router = createBrowserRouter([
   {
     path: "/session-play/:sessionId",
     element: (
-      <ProtectedRoute allowedRoles={["patient", "caregiver"]}>
+      <ProtectedRoute allowedRoles={["patient"]}>
         <SessionPlayPage />
       </ProtectedRoute>
     ),
@@ -105,7 +93,7 @@ export const router = createBrowserRouter([
   {
     path: "/progress",
     element: (
-      <ProtectedRoute allowedRoles={["patient", "caregiver", "clinician"]}>
+      <ProtectedRoute allowedRoles={["patient", "clinician"]}>
         <ProgressPage />
       </ProtectedRoute>
     ),

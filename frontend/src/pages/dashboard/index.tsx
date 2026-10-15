@@ -33,7 +33,7 @@ export default function DashboardPage() {
           <p className="text-lg text-muted-foreground">
             Peran akun Anda:{" "}
             <span className="font-semibold text-foreground capitalize">
-              {user?.role === "patient" ? "Pasien" : user?.role === "caregiver" ? "Pendamping / Caregiver" : user?.role || "-"}
+              {user?.role === "patient" ? "Pasien" : user?.role === "clinician" ? "Fisioterapis / Dokter" : user?.role || "-"}
             </span>
           </p>
           <div className="pt-4 border-t border-border">

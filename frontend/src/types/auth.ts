@@ -1,6 +1,6 @@
-export type UserRole = "patient" | "caregiver" | "clinician" | "admin"
+export type UserRole = "patient" | "clinician" | "admin"
 
-export type RegisterRole = "patient" | "caregiver"
+export type RegisterRole = "patient"
 
 export interface User {
   id: number

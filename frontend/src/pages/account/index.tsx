@@ -53,13 +53,13 @@ export default function AccountPage() {
           <UpdateProfileForm />
         </section>
 
-        {/* Section Delegasi Akses Pendamping & Dokter (Khusus Pasien) */}
+        {/* Section Delegasi Akses Dokter / Fisioterapis (Khusus Pasien) */}
         {isPatient && (
           <section className="bg-card border-2 border-border rounded-xl p-6 sm:p-8 space-y-6">
             <div className="border-b border-border pb-4">
-              <h2 className="text-xl font-bold text-foreground">Daftar Pendamping & Fisioterapis</h2>
+              <h2 className="text-xl font-bold text-foreground">Fisioterapis & Dokter Terhubung</h2>
               <p className="text-sm text-muted-foreground">
-                Beri izin kepada keluarga (caregiver) atau fisioterapis/dokter Anda untuk memantau perkembangan latihan.
+                Beri izin kepada fisioterapis atau dokter Anda untuk memantau rekam medis dan perkembangan latihan Anda.
               </p>
             </div>
             <PatientAccessManager />

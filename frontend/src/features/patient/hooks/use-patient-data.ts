@@ -98,17 +98,6 @@ export function usePatientDashboardData() {
   }
 }
 
-export function useCaregiverPatients() {
-  const { user } = useAuth()
-  const isCaregiverOrClinician = user?.role === "caregiver" || user?.role === "clinician"
-
-  return useQuery<Patient[], Error>({
-    queryKey: ["caregiver", "patients"],
-    queryFn: () => fetchCaregiverPatients(),
-    enabled: Boolean(isCaregiverOrClinician),
-  })
-}
-
 export function useClinicianPatients() {
   const { user } = useAuth()
   const isClinician = user?.role === "clinician"
@@ -119,6 +108,8 @@ export function useClinicianPatients() {
     enabled: Boolean(isClinician),
   })
 }
+
+export const useCaregiverPatients = useClinicianPatients
 
 export function usePatientProfile(patientId?: number | string) {
   return useQuery<PatientProfile, Error>({

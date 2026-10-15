@@ -48,11 +48,10 @@ export default function ProgressPage() {
   const [exportError, setExportError] = useState<string | null>(null)
   const [exportSuccess, setExportSuccess] = useState(false)
 
-  // Resolusi patient_id: default diri sendiri jika role=patient, wajib parameter untuk caregiver/clinician
+  // Resolusi patient_id: default diri sendiri jika role=patient, wajib parameter untuk clinician
   const paramPatientId = searchParams.get("patient_id")
   const userRole = user?.role?.toLowerCase()
   const isPatientRole = userRole === "patient"
-  const isCaregiverRole = userRole === "caregiver"
 
   const resolvedPatientId = isPatientRole
     ? paramPatientId || user?.id
@@ -87,7 +86,7 @@ export default function ProgressPage() {
     }
   }
 
-  // Jika role caregiver/clinician tapi tidak ada parameter patient_id
+  // Jika role clinician tapi tidak ada parameter patient_id
   if (!isPatientRole && !resolvedPatientId) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-6 md:p-10">
@@ -113,7 +112,7 @@ export default function ProgressPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">Pilih Pasien Terlebih Dahulu</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Sebagai {isCaregiverRole ? "pendamping (caregiver)" : "klinisi"}, silakan buka menu daftar pasien Anda dan pilih salah satu pasien untuk melihat grafik dan riwayat latihan mereka.
+              Sebagai fisioterapis / dokter, silakan buka menu daftar pasien Anda dan pilih salah satu pasien untuk melihat grafik dan riwayat latihan mereka.
             </p>
           </div>
           <Link
@@ -208,12 +207,6 @@ export default function ProgressPage() {
             </p>
           </div>
 
-          {/* Badge Mode Read-Only untuk Caregiver */}
-          {isCaregiverRole && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-muted text-xs font-semibold text-muted-foreground w-fit">
-              <span>Mode Tinjau Pendamping (Read-Only)</span>
-            </div>
-          )}
         </div>
 
         {/* Section 1: Grafik Tren Sudut Sendi (Reusable RomTrendChart) */}

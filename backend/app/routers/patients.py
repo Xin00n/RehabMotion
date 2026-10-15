@@ -125,13 +125,13 @@ def grant_access(patient_id: int, payload: AccessCreate, user: User = Depends(ge
         raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
     accessor = db.scalar(select(User).where(User.email == str(payload.email).lower().strip()))
     if not accessor:
-        raise HTTPException(status_code=404, detail="Akun caregiver/dokter belum terdaftar")
+        raise HTTPException(status_code=404, detail="Akun fisioterapis/dokter belum terdaftar")
     if accessor.id == patient.id:
         raise HTTPException(status_code=400, detail="Pasien tidak dapat memberikan akses ke dirinya sendiri")
-    expected_role = UserRole.CAREGIVER if payload.access_role == AccessRole.CAREGIVER else UserRole.CLINICIAN
+    expected_role = UserRole.CLINICIAN
     if accessor.role != expected_role:
-        raise HTTPException(status_code=400, detail=f"Akun tujuan harus memiliki role '{expected_role.value}'")
-    record = PatientAccess(patient_id=patient_id, accessor_id=accessor.id, access_role=payload.access_role)
+        raise HTTPException(status_code=400, detail="Akun tujuan harus merupakan akun fisioterapis / dokter ('clinician')")
+    record = PatientAccess(patient_id=patient_id, accessor_id=accessor.id, access_role=AccessRole.CLINICIAN)
     db.add(record)
     try:
         db.commit()

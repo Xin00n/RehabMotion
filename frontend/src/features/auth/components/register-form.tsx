@@ -24,7 +24,6 @@ export function RegisterForm() {
     register,
     handleSubmit,
     control,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -39,7 +38,6 @@ export function RegisterForm() {
   })
 
   const watchedPassword = useWatch({ control, name: "password" }) ?? ""
-  const watchedRole = useWatch({ control, name: "role" }) ?? "patient"
   const isPasswordLengthValid = watchedPassword.length >= 10
 
   const onSubmit = async (data: RegisterFormData) => {
@@ -74,52 +72,19 @@ export function RegisterForm() {
         </div>
       )}
 
-      {/* Pemilihan Peran */}
-      <div className="space-y-2.5">
-        <Label className="text-base font-semibold text-foreground">
-          Pilih Peran Anda
-        </Label>
-        <p className="text-sm text-muted-foreground">
-          Tentukan apakah Anda berlatih mandiri atau mendampingi pasien.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          <button
-            type="button"
-            onClick={() => setValue("role", "patient", { shouldValidate: true })}
-            className={`min-h-14 p-4 rounded-lg border-2 text-left transition-colors flex flex-col justify-center cursor-pointer ${
-              watchedRole === "patient"
-                ? "border-primary bg-primary/5 text-foreground"
-                : "border-border bg-background hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            <span className="font-semibold text-base text-foreground">
-              Pasien
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Menjalankan latihan fisioterapi mandiri
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setValue("role", "caregiver", { shouldValidate: true })}
-            className={`min-h-14 p-4 rounded-lg border-2 text-left transition-colors flex flex-col justify-center cursor-pointer ${
-              watchedRole === "caregiver"
-                ? "border-primary bg-primary/5 text-foreground"
-                : "border-border bg-background hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            <span className="font-semibold text-base text-foreground">
-              Pendamping / Caregiver
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Membantu memantau sesi latihan pasien
-            </span>
-          </button>
+      {/* Informasi Peran Pendaftaran */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
+        <div>
+          <span className="text-xs font-bold text-primary uppercase tracking-wider block">
+            Pendaftaran Akun
+          </span>
+          <p className="text-sm font-semibold text-foreground">
+            Akun Pasien Mandiri (Rehabilitasi & Pemulihan)
+          </p>
         </div>
-        {errors.role && (
-          <p className="text-sm font-medium text-destructive">{errors.role.message}</p>
-        )}
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+          Pasien
+        </span>
       </div>
 
       {/* Nama Lengkap */}
