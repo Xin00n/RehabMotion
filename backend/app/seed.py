@@ -18,30 +18,30 @@ from app.security import hash_password
 EXERCISES = [
     {
         "code": "elbow-flexion",
-        "name": "Elbow Flexion",
+        "name": "Fleksi Siku (Elbow Flexion)",
         "primary_joint": "Elbow",
         "landmarks": {"left": [11, 13, 15], "right": [12, 14, 16]},
         "rom_min_deg": 40.0,
         "rom_max_deg": 135.0,
-        "description": "Latihan fleksi siku menggunakan titik bahu, siku, dan pergelangan tangan. Nilai ROM target untuk pasien harus ditentukan tenaga kesehatan.",
+        "description": "Latihan menekuk siku secara perlahan ke arah bahu untuk melatih kekuatan otot lengan dan memperluas kelenturan rentang gerak siku Anda.",
     },
     {
         "code": "shoulder-abduction",
-        "name": "Shoulder Abduction",
+        "name": "Abduksi Bahu (Shoulder Abduction)",
         "primary_joint": "Shoulder",
         "landmarks": {"left": [23, 11, 13], "right": [24, 12, 14]},
         "rom_min_deg": 0.0,
         "rom_max_deg": 90.0,
-        "description": "Latihan abduksi bahu menggunakan titik pinggul, bahu, dan siku. Target awal mengikuti PRD dan perlu disesuaikan resep klinis.",
+        "description": "Latihan mengangkat lengan ke samping setinggi bahu untuk mengembalikan mobilitas sendi bahu dan melatih koordinasi otot lengan atas.",
     },
     {
         "code": "seated-knee-extension",
-        "name": "Seated Knee Extension",
+        "name": "Ekstensi Lutut (Seated Knee Extension)",
         "primary_joint": "Knee",
         "landmarks": {"left": [23, 25, 27], "right": [24, 26, 28]},
         "rom_min_deg": 90.0,
         "rom_max_deg": 160.0,
-        "description": "Latihan ekstensi lutut sambil duduk menggunakan titik pinggul, lutut, dan pergelangan kaki. Target ROM mengikuti resep klinis.",
+        "description": "Latihan meluruskan tungkai kaki ke depan dari posisi duduk untuk memperkuat otot paha serta mendukung kestabilan lutut saat berdiri dan berjalan.",
     },
 ]
 

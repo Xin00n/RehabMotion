@@ -127,7 +127,7 @@ export default function ExercisesPage() {
                         {exerciseName}
                       </h2>
                       {item.exercise?.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                           {item.exercise.description}
                         </p>
                       )}

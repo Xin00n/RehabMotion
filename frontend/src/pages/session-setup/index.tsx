@@ -157,7 +157,7 @@ export default function SessionSetupPage() {
       <main className="max-w-4xl w-full mx-auto my-6 space-y-8">
         <div>
           <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-2.5 py-1 rounded">
-            Pre-Session Setup
+            Persiapan Sesi Latihan
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mt-2">
             {isLoadingPrescription
@@ -167,6 +167,12 @@ export default function SessionSetupPage() {
           <p className="text-base sm:text-lg text-muted-foreground mt-1">
             Posisikan tubuh Anda di depan kamera dan pastikan pencahayaan ruangan cukup terang.
           </p>
+          {prescription?.exercise?.description && (
+            <div className="mt-3 p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-sm text-foreground/90 leading-relaxed">
+              <span className="font-semibold text-primary block mb-0.5">Petunjuk Gerakan:</span>
+              {prescription.exercise.description}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -237,7 +243,7 @@ export default function SessionSetupPage() {
             <div className="bg-card border-2 border-border rounded-2xl p-6 space-y-5">
               <div>
                 <h2 className="text-lg font-bold text-foreground">
-                  Konfirmasi Sisi Tubuh (FR-1.2)
+                  Konfirmasi Sisi Tubuh yang Dilatih
                 </h2>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   Tentukan anggota tubuh yang akan dilatih pada sesi kali ini:

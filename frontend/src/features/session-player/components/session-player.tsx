@@ -688,7 +688,7 @@ export function SessionPlayer({
 
       {/* Footer */}
       <footer className="w-full max-w-5xl mx-auto text-center py-2 text-xs text-muted-foreground border-t border-border">
-        RehabMotion Core Session Player — WASM Skeleton & Real-time Audio Guidance
+        RehabMotion — Panduan Gerakan AI & Umpan Balik Suara Real-Time
       </footer>
     </div>
   )
