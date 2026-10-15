@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
-import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2, HelpCircle } from "lucide-react"
+import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2, HelpCircle, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { getExerciseIllustration } from "@/pages/exercises"
@@ -550,9 +550,9 @@ export function SessionPlayer({
       </header>
 
       {/* Main Workout Area */}
-      <main className="w-full max-w-5xl mx-auto my-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+      <main className="w-full max-w-5xl mx-auto my-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Video Canvas Container dengan Skeleton Overlay */}
-        <div className="md:col-span-8 space-y-3">
+        <div className="md:col-span-8 space-y-4">
           <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-black border-2 border-border shadow-md">
             {cameraError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-destructive bg-destructive/10 space-y-3">
@@ -614,12 +614,37 @@ export function SessionPlayer({
           </div>
 
           {/* Feedback Suara Real-Time Banner */}
-          <div className="p-4 rounded-xl border-2 border-border bg-card flex items-center gap-3">
+          <div className="p-4 rounded-xl border-2 border-border bg-card flex items-center gap-3 shadow-2xs">
             <Volume2 className="size-5 shrink-0 text-foreground" />
             <p className="text-base sm:text-lg font-bold text-foreground leading-snug">
               {repContext.feedbackMessage}
             </p>
           </div>
+
+          {/* Gambar Ilustrasi Panduan Gerakan Aktif (Selalu Terlihat Saat Sesi Latihan Berjalan) */}
+          {illustration && (
+            <div className="border-2 border-border bg-card rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-muted/70 px-4 py-2.5 border-b border-border flex items-center justify-between">
+                <span className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="size-4 text-primary" /> Contoh Panduan Gerakan: {activeExerciseName}
+                </span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  3 Tahap: Posisi Awal → Gerakan → Tahan & Selesai
+                </span>
+              </div>
+              <div
+                className="p-3 bg-muted/20 flex justify-center cursor-pointer hover:opacity-95 transition-opacity"
+                onClick={() => setShowGuideModal(true)}
+                title="Klik untuk memperbesar panduan gerakan"
+              >
+                <img
+                  src={illustration}
+                  alt={activeExerciseName}
+                  className="w-full max-h-56 object-contain rounded-xl border border-border/40"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Panel Kontrol Latihan & Emergency Stop */}
