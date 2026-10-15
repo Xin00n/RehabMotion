@@ -5,6 +5,7 @@ import { ArrowLeft, Camera, CheckCircle2, AlertTriangle, Play, Loader2 } from "l
 import { Button, buttonVariants } from "@/components/ui/button"
 import { usePatientPrescriptions } from "@/features/patient/hooks/use-patient-data"
 import { createSession } from "@/features/session/api/session-api"
+import { getExerciseIllustration } from "@/pages/exercises"
 import type { Prescription } from "@/types/patient"
 
 export default function SessionSetupPage() {
@@ -22,6 +23,11 @@ export default function SessionSetupPage() {
     prescription?.affected_side?.toLowerCase() === "left" ? "left" : "right"
   const [userSelectedSide, setUserSelectedSide] = useState<"left" | "right" | null>(null)
   const selectedSide = userSelectedSide ?? defaultSide
+
+  const illustration = getExerciseIllustration(
+    prescription?.exercise?.code,
+    prescription?.exercise?.name || prescription?.exercise_name
+  )
 
   // Akses Webcam
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -238,8 +244,26 @@ export default function SessionSetupPage() {
             </p>
           </div>
 
-          {/* Konfirmasi Sisi Terdampak (FR-1.2) & Tombol Mulai */}
+          {/* Kolom Kanan: Panduan Visual & Konfirmasi Sisi Tubuh */}
           <div className="md:col-span-5 space-y-6">
+            {illustration && (
+              <div className="bg-card border-2 border-border rounded-2xl overflow-hidden shadow-xs">
+                <div className="bg-muted/70 px-4 py-2.5 border-b border-border flex items-center justify-between">
+                  <span className="text-sm font-bold text-foreground">
+                    Contoh Panduan Gerakan
+                  </span>
+                  <span className="text-xs text-muted-foreground">3 Langkah Gerakan</span>
+                </div>
+                <div className="p-3 bg-muted/20">
+                  <img
+                    src={illustration}
+                    alt={prescription?.exercise?.name || "Panduan Gerakan"}
+                    className="w-full h-auto rounded-xl object-contain border border-border/50"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="bg-card border-2 border-border rounded-2xl p-6 space-y-5">
               <div>
                 <h2 className="text-lg font-bold text-foreground">

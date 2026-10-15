@@ -14,6 +14,20 @@ function formatAffectedSide(side?: string): string {
   return side
 }
 
+export function getExerciseIllustration(code?: string, name?: string): string | null {
+  const str = `${code || ""} ${name || ""}`.toLowerCase()
+  if (str.includes("elbow") || str.includes("siku")) {
+    return "/exercises/elbow-flexion.jpg"
+  }
+  if (str.includes("shoulder") || str.includes("bahu") || str.includes("abduction")) {
+    return "/exercises/shoulder-abduction.jpg"
+  }
+  if (str.includes("knee") || str.includes("lutut") || str.includes("extension")) {
+    return "/exercises/seated-knee-extension.jpg"
+  }
+  return null
+}
+
 export default function ExercisesPage() {
   const { data: prescriptions = [], isLoading, isError } = usePatientPrescriptions(true)
 
@@ -113,11 +127,23 @@ export default function ExercisesPage() {
                   : "Sesuai Toleransi"
               const affectedSide = formatAffectedSide(item.affected_side)
 
+              const illustration = getExerciseIllustration(item.exercise?.code, exerciseName)
+
               return (
                 <div
                   key={item.id}
-                  className="border-2 border-border bg-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+                  className="border-2 border-border bg-card rounded-2xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6"
                 >
+                  {illustration && (
+                    <div className="w-full lg:w-64 h-36 rounded-xl overflow-hidden border border-border shrink-0 bg-muted/40 shadow-xs">
+                      <img
+                        src={illustration}
+                        alt={exerciseName}
+                        className="w-full h-full object-cover object-center"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-4 flex-1">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2.5 py-1 rounded-md">

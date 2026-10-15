@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
-import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2 } from "lucide-react"
+import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2, HelpCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { getExerciseIllustration } from "@/pages/exercises"
 import {
   calculateExerciseAngle,
   detectPostureCompensation,
@@ -59,6 +60,14 @@ export function SessionPlayer({
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
+  const [showGuideModal, setShowGuideModal] = useState(false)
+
+  const activeExerciseName =
+    prescription?.exercise?.name || prescription?.exercise_name || exerciseName
+  const illustration = getExerciseIllustration(
+    prescription?.exercise?.code,
+    activeExerciseName
+  )
 
   // Tracking & Engine State
   const [currentAngle, setCurrentAngle] = useState<number>(0)
@@ -505,8 +514,19 @@ export function SessionPlayer({
           </div>
         </div>
 
-        {/* Audio Toggle & Timer */}
-        <div className="flex items-center gap-3">
+        {/* Audio Toggle, Guide & Timer */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {illustration && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGuideModal(true)}
+              className="cursor-pointer gap-1.5 text-xs sm:text-sm font-semibold"
+            >
+              <HelpCircle className="size-4 text-primary" />
+              <span className="hidden sm:inline">Contoh Gerakan</span>
+            </Button>
+          )}
           <div className="px-3 py-1 bg-muted rounded-lg font-mono font-bold text-sm sm:text-base border border-border">
             {formatTimer(elapsedSeconds)}
           </div>
@@ -690,6 +710,53 @@ export function SessionPlayer({
       <footer className="w-full max-w-5xl mx-auto text-center py-2 text-xs text-muted-foreground border-t border-border">
         RehabMotion — Panduan Gerakan AI & Umpan Balik Suara Real-Time
       </footer>
+
+      {/* Modal Contoh Gerakan */}
+      {showGuideModal && illustration && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in"
+        >
+          <div className="bg-card text-card-foreground border-2 border-border rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">
+                  Panduan Gerakan: {activeExerciseName}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Ikuti 3 tahapan posisi (Awal, Gerakan, Selesai Tahan)
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowGuideModal(false)}
+                className="cursor-pointer"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="rounded-xl overflow-hidden border border-border bg-muted/20 p-2">
+              <img
+                src={illustration}
+                alt={activeExerciseName}
+                className="w-full h-auto max-h-[60vh] object-contain rounded-lg mx-auto"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setShowGuideModal(false)}
+                className="cursor-pointer font-bold px-6"
+              >
+                Lanjutkan Latihan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

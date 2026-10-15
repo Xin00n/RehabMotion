@@ -153,7 +153,7 @@ export default function PatientDashboardPage() {
 
             <Link
               to="/exercises"
-              className="text-base font-semibold text-foreground underline underline-offset-4 hover:opacity-80 pt-2"
+              className="text-base font-semibold text-foreground hover:opacity-80 pt-2"
             >
               Lihat Semua Resep Latihan →
             </Link>

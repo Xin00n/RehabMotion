@@ -68,19 +68,23 @@ class PatientProfileOut(ORMModel):
     user_id: int
     full_name: str | None = None
     email: EmailStr | None = None
+    phone: str | None = None
     default_affected_side: AffectedSide
     caregiver_notes: str | None = None
+    notes: str | None = None
     updated_at: datetime
 
     @model_validator(mode="before")
     @classmethod
     def populate_patient_info(cls, data):
         if hasattr(data, "user_id"):
+            notes_val = getattr(data, "caregiver_notes", None)
             res = {
                 "id": getattr(data, "user_id"),
                 "user_id": getattr(data, "user_id"),
                 "default_affected_side": getattr(data, "default_affected_side", AffectedSide.BOTH),
-                "caregiver_notes": getattr(data, "caregiver_notes", None),
+                "caregiver_notes": notes_val,
+                "notes": notes_val,
                 "updated_at": getattr(data, "updated_at", datetime.now()),
             }
             if hasattr(data, "user") and data.user:
@@ -93,6 +97,21 @@ class PatientProfileOut(ORMModel):
 class PatientProfileUpdate(BaseModel):
     default_affected_side: AffectedSide | None = None
     caregiver_notes: str | None = Field(default=None, max_length=2000)
+    notes: str | None = Field(default=None, max_length=2000)
+    full_name: str | None = Field(default=None, max_length=120)
+    phone: str | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_profile_aliases(cls, data):
+        if isinstance(data, dict):
+            if "caregiver_notes" not in data or data.get("caregiver_notes") is None:
+                if "notes" in data and data.get("notes") is not None:
+                    data["caregiver_notes"] = data["notes"]
+            elif "notes" not in data or data.get("notes") is None:
+                if "caregiver_notes" in data and data.get("caregiver_notes") is not None:
+                    data["notes"] = data["caregiver_notes"]
+        return data
 
 
 class PatientSummary(BaseModel):
@@ -102,6 +121,12 @@ class PatientSummary(BaseModel):
     role: UserRole
     access_role: AccessRole | None = None
     default_affected_side: AffectedSide | None = None
+    phone: str | None = None
+    active_prescriptions_count: int = 0
+    last_session_at: datetime | None = None
+    compliance_rate: float | None = None
+    compliance_status: str | None = None
+    notes: str | None = None
 
 
 class AccessCreate(BaseModel):
@@ -247,14 +272,33 @@ class SessionOut(ORMModel):
     status: SessionStatus
     started_at: datetime
     ended_at: datetime | None
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
     duration_seconds: int | None
     total_repetitions: int
     successful_repetitions: int
+    repetitions_completed: int | None = None
     average_peak_rom_deg: float | None
     maximum_peak_rom_deg: float | None
+    avg_rom: float | None = None
     stop_reason: str | None
     notes: str | None
     exercise: ExerciseOut
+    exercise_name: str | None = None
+
+    @model_validator(mode="after")
+    def populate_session_aliases(self):
+        if self.created_at is None:
+            self.created_at = self.started_at
+        if self.completed_at is None and self.ended_at is not None:
+            self.completed_at = self.ended_at
+        if self.repetitions_completed is None:
+            self.repetitions_completed = self.successful_repetitions or self.total_repetitions or 0
+        if self.avg_rom is None and self.average_peak_rom_deg is not None:
+            self.avg_rom = self.average_peak_rom_deg
+        if not self.exercise_name and self.exercise:
+            self.exercise_name = getattr(self.exercise, "name", None)
+        return self
 
 
 class ROMMeasurementCreate(BaseModel):
@@ -296,6 +340,20 @@ class AnalyticsSummary(BaseModel):
 class ROMTrendPoint(BaseModel):
     date: date
     sessions_count: int
-    average_peak_rom_deg: float | None
-    best_peak_rom_deg: float | None
-    successful_repetitions: int
+    average_peak_rom_deg: float | None = None
+    avg_rom: float = 0.0
+    best_peak_rom_deg: float | None = None
+    max_rom: float | None = None
+    target_rom: float | None = None
+    successful_repetitions: int = 0
+    exercise_name: str | None = None
+
+    @model_validator(mode="after")
+    def populate_trend_aliases(self):
+        if self.avg_rom == 0.0 and self.average_peak_rom_deg is not None:
+            self.avg_rom = self.average_peak_rom_deg
+        elif self.average_peak_rom_deg is None and self.avg_rom != 0.0:
+            self.average_peak_rom_deg = self.avg_rom
+        if self.max_rom is None and self.best_peak_rom_deg is not None:
+            self.max_rom = self.best_peak_rom_deg
+        return self
