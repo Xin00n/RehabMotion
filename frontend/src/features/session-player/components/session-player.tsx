@@ -37,6 +37,7 @@ interface SessionPlayerProps {
   targetReps?: number
   targetRom?: number
   exerciseName?: string
+  initialMuted?: boolean
 }
 
 export function SessionPlayer({
@@ -46,6 +47,7 @@ export function SessionPlayer({
   targetReps = 10,
   targetRom = 90,
   exerciseName = "Elbow Flexion",
+  initialMuted,
 }: SessionPlayerProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -60,12 +62,44 @@ export function SessionPlayer({
   const currentAngleRef = useRef<number>(0)
   const angleSmootherRef = useRef<AngleSmoother>(new AngleSmoother(0.35))
 
-  // Audio State
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true)
-  const isAudioEnabledRef = useRef(isAudioEnabled)
+  // Audio State & Mode Mute
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(() => {
+    if (initialMuted !== undefined) return initialMuted
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search)
+      if (searchParams.get("muted") === "true") return true
+    }
+    return audioCoach.getMuted()
+  })
+  const isAudioMutedRef = useRef(isAudioMuted)
   useEffect(() => {
-    isAudioEnabledRef.current = isAudioEnabled
-  }, [isAudioEnabled])
+    isAudioMutedRef.current = isAudioMuted
+  }, [isAudioMuted])
+
+  const toggleMute = useCallback(() => {
+    setIsAudioMuted((prev) => {
+      const next = !prev
+      audioCoach.setMuted(next)
+      if (!next) {
+        audioCoach.unlock()
+        audioCoach.playChime("rep")
+      }
+      return next
+    })
+  }, [])
+
+  // Shortcut keyboard: tekan 'M' untuk toggle Mode Mute
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === "m" || e.key === "M") {
+        e.preventDefault()
+        toggleMute()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [toggleMute])
 
   const hasAnnouncedStartRef = useRef(false)
   const lastHoldSecondRef = useRef<number | null>(null)
@@ -229,11 +263,11 @@ export function SessionPlayer({
 
   // Sinkronisasi status audio coach dengan state toggle
   useEffect(() => {
-    audioCoach.setMuted(!isAudioEnabled)
-    if (!isAudioEnabled) {
+    audioCoach.setMuted(isAudioMuted)
+    if (isAudioMuted) {
       audioCoach.stop()
     }
-  }, [isAudioEnabled])
+  }, [isAudioMuted])
 
   // User interaction unlock listener & cleanup
   useEffect(() => {
@@ -396,7 +430,7 @@ export function SessionPlayer({
                     // Sambutan audio saat pose pertama kali terdeteksi
                     if (!hasAnnouncedStartRef.current) {
                       hasAnnouncedStartRef.current = true
-                      if (isAudioEnabledRef.current) {
+                      if (!isAudioMutedRef.current) {
                         audioCoach.playChime("start")
                         audioCoach.speak("Kamera aktif. Mulai gerakan perlahan.")
                       }
@@ -431,7 +465,7 @@ export function SessionPlayer({
                       setRepContext(nextCtx)
 
                       // Notifikasi Audio Cues Berdasarkan Transisi Status Latihan
-                      if (isAudioEnabledRef.current) {
+                      if (!isAudioMutedRef.current) {
                         // A. Masuk ke zona tahan (target tercapai)
                         if (prevCtx.state !== "HOLD" && nextCtx.state === "HOLD") {
                           audioCoach.playChime("target")
@@ -491,7 +525,7 @@ export function SessionPlayer({
                         prevCtx.repsCompleted < currentTargetReps &&
                         !isSessionFinishedRef.current
                       ) {
-                        if (isAudioEnabledRef.current) {
+                        if (!isAudioMutedRef.current) {
                           audioCoach.playChime("finish")
                           audioCoach.speak("Target latihan selesai! Kerja luar biasa.", true)
                         }
@@ -612,34 +646,43 @@ export function SessionPlayer({
           <div className="px-3 py-1 bg-muted rounded-lg font-mono font-bold text-sm sm:text-base border border-border">
             {formatTimer(elapsedSeconds)}
           </div>
+          {/* Tombol Mode Mute */}
+          <Button
+            variant={isAudioMuted ? "destructive" : "outline"}
+            size="sm"
+            onClick={toggleMute}
+            className="cursor-pointer gap-1.5 text-xs sm:text-sm font-semibold transition-all shadow-xs"
+            title={isAudioMuted ? "Bunyikan audio (Shortcut: Tekan 'M')" : "Bisukan audio - Mode Mute (Shortcut: Tekan 'M')"}
+          >
+            {isAudioMuted ? (
+              <>
+                <VolumeX className="size-4 text-white" />
+                <span className="font-bold">Mode Mute</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="size-4 text-primary" />
+                <span className="hidden sm:inline">Mode Mute</span>
+              </>
+            )}
+          </Button>
+
+          {/* Tombol Tes Suara */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
+              if (isAudioMuted) {
+                setIsAudioMuted(false)
+              }
               audioCoach.unlock()
               audioCoach.testSound()
             }}
             className="cursor-pointer gap-1.5 text-xs sm:text-sm font-semibold text-primary hover:text-primary"
             title="Uji coba panduan suara dan bunyi latihan"
           >
-            <Volume2 className="size-4" />
+            <Sparkles className="size-4" />
             <span className="hidden sm:inline">Tes Suara</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-lg"
-            onClick={() => {
-              const next = !isAudioEnabled
-              setIsAudioEnabled(next)
-              audioCoach.setMuted(!next)
-              if (next) {
-                audioCoach.unlock()
-              }
-            }}
-            className="cursor-pointer"
-            title={isAudioEnabled ? "Matikan panduan suara" : "Aktifkan panduan suara"}
-          >
-            {isAudioEnabled ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
           </Button>
         </div>
       </header>
@@ -673,8 +716,8 @@ export function SessionPlayer({
                   className="absolute inset-0 w-full h-full pointer-events-none -scale-x-100"
                 />
 
-                {/* Status MediaPipe Badge */}
-                <div className="absolute top-4 left-4 z-10">
+                {/* Status MediaPipe Badge & Mode Mute Badge */}
+                <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
                   <div
                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-md ${
                       isPoseReady
@@ -685,6 +728,13 @@ export function SessionPlayer({
                     <CheckCircle className="size-3.5" />
                     <span>{isPoseReady ? "Skeleton 33 Landmark Aktif" : "Mendeteksi Tubuh..."}</span>
                   </div>
+
+                  {isAudioMuted && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-md bg-destructive text-destructive-foreground animate-in fade-in">
+                      <VolumeX className="size-3.5" />
+                      <span>Mode Mute Aktif</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* FR-4.3 Color Legend Overlay */}

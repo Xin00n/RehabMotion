@@ -25,6 +25,7 @@ export default function SessionPlayPage() {
     : 90
 
   const targetReps = prescription?.target_repetitions || 10
+  const isMutedParam = searchParams.get("muted") === "true"
 
   return (
     <SessionPlayer
@@ -34,6 +35,7 @@ export default function SessionPlayPage() {
       targetReps={targetReps}
       targetRom={targetRom}
       exerciseName={prescription?.exercise?.name || prescription?.exercise_name || "Elbow Flexion"}
+      initialMuted={isMutedParam}
     />
   )
 }

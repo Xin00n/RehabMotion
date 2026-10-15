@@ -21,6 +21,22 @@ describe("AudioCoach", () => {
     expect(coach.getMuted()).toBe(false)
   })
 
+  it("dapat melakukan toggleMuted dengan benar", () => {
+    coach.setMuted(false)
+    expect(coach.toggleMuted()).toBe(true)
+    expect(coach.getMuted()).toBe(true)
+
+    expect(coach.toggleMuted()).toBe(false)
+    expect(coach.getMuted()).toBe(false)
+  })
+
+  it("testSound otomatis menyalakan audio kembali jika dalam kondisi muted", () => {
+    coach.setMuted(true)
+    expect(coach.getMuted()).toBe(true)
+    coach.testSound()
+    expect(coach.getMuted()).toBe(false)
+  })
+
   it("dapat memanggil unlock, playChime, speak, dan stop tanpa melempar exception", () => {
     expect(() => {
       coach.unlock()

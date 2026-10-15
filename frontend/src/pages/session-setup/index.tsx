@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
-import { ArrowLeft, Camera, CheckCircle2, AlertTriangle, Play, Loader2 } from "lucide-react"
+import { ArrowLeft, Camera, CheckCircle2, AlertTriangle, Play, Loader2, Volume2, VolumeX } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { usePatientPrescriptions } from "@/features/patient/hooks/use-patient-data"
@@ -24,6 +24,14 @@ export default function SessionSetupPage() {
     prescription?.affected_side?.toLowerCase() === "left" ? "left" : "right"
   const [userSelectedSide, setUserSelectedSide] = useState<"left" | "right" | null>(null)
   const selectedSide = userSelectedSide ?? defaultSide
+
+  // Opsi Mode Mute / Suara
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rehabmotion_audio_muted") === "true"
+    }
+    return false
+  })
 
   const illustration = getExerciseIllustration(
     prescription?.exercise?.code,
@@ -110,8 +118,13 @@ export default function SessionSetupPage() {
   }
 
   const handleConfirmStartSession = async () => {
-    // Buka kunci AudioContext saat ada interaksi klik user langsung
-    audioCoach.unlock()
+    // Buka kunci AudioContext saat ada interaksi klik user langsung jika tidak dimute
+    if (!isAudioMuted) {
+      audioCoach.unlock()
+      audioCoach.setMuted(false)
+    } else {
+      audioCoach.setMuted(true)
+    }
 
     if (!prescriptionId) return
 
@@ -123,6 +136,7 @@ export default function SessionSetupPage() {
     }
 
     setIsCreatingSession(true)
+    const muteParam = isAudioMuted ? "&muted=true" : ""
     try {
       const newSession = await createSession({
         exercise_id: exerciseId,
@@ -133,13 +147,13 @@ export default function SessionSetupPage() {
       if (cameraStream) {
         cameraStream.getTracks().forEach((t) => t.stop())
       }
-      navigate(`/session-play/${newSession.id}?prescription_id=${prescriptionId}&side=${selectedSide}`)
+      navigate(`/session-play/${newSession.id}?prescription_id=${prescriptionId}&side=${selectedSide}${muteParam}`)
     } catch {
       // Fallback jika backend offline: tetap masuk ke session-play dengan mock ID
       if (cameraStream) {
         cameraStream.getTracks().forEach((t) => t.stop())
       }
-      navigate(`/session-play/demo-${Date.now()}?prescription_id=${prescriptionId}&side=${selectedSide}`)
+      navigate(`/session-play/demo-${Date.now()}?prescription_id=${prescriptionId}&side=${selectedSide}${muteParam}`)
     } finally {
       setIsCreatingSession(false)
     }
@@ -312,6 +326,58 @@ export default function SessionSetupPage() {
                     ? `${prescription?.target_rom_deg ?? prescription?.target_rom}°`
                     : "Sesuai Toleransi"}
                 </span>
+              </div>
+            </div>
+
+            {/* Opsi Audio / Mode Mute */}
+            <div className="bg-card border-2 border-border rounded-2xl p-5 space-y-3">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  Mode Suara Latihan
+                </h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Pilih panduan audio verbal & bel, atau latihan dalam mode hening:
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAudioMuted(false)
+                    audioCoach.setMuted(false)
+                  }}
+                  className={`p-3.5 rounded-xl border-2 text-left cursor-pointer transition-all flex items-start gap-3 ${
+                    !isAudioMuted
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <Volume2 className="size-5 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-sm">Suara Aktif</div>
+                    <div className="text-xs opacity-75 font-normal mt-0.5">Panduan audio & bel</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAudioMuted(true)
+                    audioCoach.setMuted(true)
+                  }}
+                  className={`p-3.5 rounded-xl border-2 text-left cursor-pointer transition-all flex items-start gap-3 ${
+                    isAudioMuted
+                      ? "border-destructive bg-destructive/10 text-destructive"
+                      : "border-border bg-background hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <VolumeX className="size-5 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-sm">Mode Mute</div>
+                    <div className="text-xs opacity-75 font-normal mt-0.5">Hening tanpa suara</div>
+                  </div>
+                </button>
               </div>
             </div>
 

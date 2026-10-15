@@ -22,6 +22,13 @@ export class AudioCoach {
 
   constructor() {
     if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("rehabmotion_audio_muted")
+        if (stored !== null) {
+          this.isMuted = stored === "true"
+        }
+      } catch {}
+
       if ("speechSynthesis" in window) {
         this.synth = window.speechSynthesis
         this.loadVoices()
@@ -272,6 +279,9 @@ export class AudioCoach {
    */
   testSound() {
     this.unlock()
+    if (this.isMuted) {
+      this.setMuted(false)
+    }
     this.playChime("rep")
     setTimeout(() => {
       this.speak("Tes suara berhasil. Panduan audio RehabMotion aktif.", true)
@@ -289,9 +299,19 @@ export class AudioCoach {
 
   setMuted(muted: boolean) {
     this.isMuted = muted
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("rehabmotion_audio_muted", String(muted))
+      } catch {}
+    }
     if (muted) {
       this.stop()
     }
+  }
+
+  toggleMuted(): boolean {
+    this.setMuted(!this.isMuted)
+    return this.isMuted
   }
 
   getMuted(): boolean {
