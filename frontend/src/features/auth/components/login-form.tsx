@@ -23,7 +23,6 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -68,37 +67,6 @@ export function LoginForm() {
         </div>
       )}
 
-      {/* Demo Account Picker for Testing */}
-      <div className="rounded-xl border-2 border-border bg-card p-4 space-y-2.5 shadow-2xs">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-          Pilih Cepat Akun Demo (Uji Coba Pengujian)
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setValue("email", "pasien@rehabmotion.id", { shouldValidate: true })
-              setValue("password", "password123", { shouldValidate: true })
-            }}
-            className="p-3 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
-          >
-            <span className="font-bold text-sm text-primary block">👨‍🦳 Akun Pasien Mandiri</span>
-            <span className="text-xs text-muted-foreground truncate block">pasien@rehabmotion.id</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setValue("email", "dokter@rehabmotion.id", { shouldValidate: true })
-              setValue("password", "password123", { shouldValidate: true })
-            }}
-            className="p-3 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-left cursor-pointer transition-colors"
-          >
-            <span className="font-bold text-sm text-primary block">🩺 Akun Fisioterapis / Dokter</span>
-            <span className="text-xs text-muted-foreground truncate block">dokter@rehabmotion.id</span>
-          </button>
-        </div>
-      </div>
 
       {/* Alamat Email */}
       <div className="space-y-2">
