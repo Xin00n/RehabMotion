@@ -16,7 +16,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/stores/auth-store"
 import { useRomTrend } from "@/features/analytics/hooks/use-rom-trend"
-import { usePatientSessions } from "@/features/patient/hooks/use-patient-data"
+import { usePatientSessions, getSessionDate, getSessionReps } from "@/features/patient/hooks/use-patient-data"
 import { downloadSessionReportPdf } from "@/features/analytics/api/analytics-api"
 import { RomTrendChart } from "@/features/analytics/components/rom-trend-chart"
 import type { Session } from "@/types/patient"
@@ -278,7 +278,7 @@ export default function ProgressPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="size-4" />
-                      <span>{formatDateIndo(session.completed_at || session.created_at)}</span>
+                      <span>{formatDateIndo(getSessionDate(session))}</span>
                     </div>
                     <h3 className="text-lg font-bold text-foreground">
                       {session.exercise?.name || session.exercise_name || "Latihan Fisioterapi"}
@@ -291,35 +291,37 @@ export default function ProgressPage() {
                         <Dumbbell className="size-3.5" /> Repetisi
                       </span>
                       <span className="text-base font-bold text-foreground">
-                        {session.repetitions_completed}{" "}
+                        {getSessionReps(session)}{" "}
                         {session.target_repetitions ? `/ ${session.target_repetitions}` : "rep"}
                       </span>
                     </div>
 
-                    {session.avg_rom !== undefined && (
+                    {(session.avg_rom ?? session.average_peak_rom_deg) !== undefined &&
+                      (session.avg_rom ?? session.average_peak_rom_deg) !== null && (
                       <div className="text-right sm:text-left">
                         <span className="text-xs text-muted-foreground block">
                           Sudut Rata-rata
                         </span>
                         <span className="text-base font-bold text-foreground">
-                          {Math.round(session.avg_rom)}°
+                          {Math.round(session.avg_rom ?? session.average_peak_rom_deg ?? 0)}°
                         </span>
                       </div>
                     )}
 
                     <div className="text-right sm:text-left">
                       <span className="text-xs text-muted-foreground block flex items-center gap-1">
-                        <Clock className="size-3.5" /> Waktu Selesai
+                        <Clock className="size-3.5" /> Durasi Latihan
                       </span>
                       <span className="text-sm font-semibold text-foreground">
                         {formatDuration(
-                          session.completed_at && session.created_at
-                            ? Math.round(
-                                (new Date(session.completed_at).getTime() -
-                                  new Date(session.created_at).getTime()) /
-                                  1000
-                              )
-                            : undefined
+                          session.duration_seconds ??
+                            (session.completed_at && session.created_at
+                              ? Math.round(
+                                  (new Date(session.completed_at).getTime() -
+                                    new Date(session.created_at).getTime()) /
+                                    1000
+                                )
+                              : undefined)
                         )}
                       </span>
                     </div>

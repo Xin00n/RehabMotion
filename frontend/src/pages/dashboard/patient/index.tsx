@@ -1,9 +1,10 @@
-import { Link, useNavigate } from "react-router-dom"
+import { useEffect } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { Play, TrendingUp, Calendar, Activity, User, LogOut } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { useAuth, authStore } from "@/features/auth/stores/auth-store"
-import { usePatientDashboardData } from "@/features/patient/hooks/use-patient-data"
+import { usePatientDashboardData, getSessionDate, getSessionReps } from "@/features/patient/hooks/use-patient-data"
 
 function formatDateIndo(dateStr?: string): string {
   if (!dateStr) return "-"
@@ -19,13 +20,21 @@ function formatDateIndo(dateStr?: string): string {
 
 export default function PatientDashboardPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const {
     isLoading,
     activePrescriptionsCount,
     latestSession,
     sessionsThisWeekCount,
+    refetch,
   } = usePatientDashboardData()
+
+  useEffect(() => {
+    if (searchParams.get("session_finished") === "true") {
+      refetch()
+    }
+  }, [searchParams, refetch])
 
   const handleLogout = () => {
     authStore.clearAuth()
@@ -133,11 +142,11 @@ export default function PatientDashboardPage() {
                         <p className="text-sm text-foreground/80 flex items-center gap-2 pt-0.5">
                           <Calendar className="size-4 text-muted-foreground" />
                           <span>
-                            {formatDateIndo(latestSession.completed_at || latestSession.created_at)}
+                            {formatDateIndo(getSessionDate(latestSession))}
                           </span>
                           <span>•</span>
                           <span className="font-semibold">
-                            {latestSession.repetitions_completed} repetisi
+                            {getSessionReps(latestSession)} repetisi
                           </span>
                         </p>
                       </>

@@ -70,10 +70,12 @@ export function RomTrendChart({ data, targetRom, height = 340 }: RomTrendChartPr
       // Pertahankan string asli jika parsing gagal
     }
 
+    const rawAvg = item.avg_rom ?? (item as any).average_peak_rom_deg ?? 0
+
     return {
       ...item,
       displayDate,
-      avg_rom: Math.round(item.avg_rom * 10) / 10,
+      avg_rom: Math.round(Number(rawAvg) * 10) / 10,
     }
   })
 

@@ -1,10 +1,10 @@
 from datetime import date, datetime, time, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import get_current_user, require_patient_access
-from app.models import RehabSession, SessionStatus, User
+from app.models import Prescription, RehabSession, SessionStatus, User
 from app.schemas import AnalyticsSummary, ROMTrendPoint
 
 router = APIRouter(tags=["Analytics"])
@@ -59,7 +59,7 @@ def get_rom_trend(
     db: Session = Depends(get_db),
 ):
     require_patient_access(db, user, patient_id)
-    query = select(RehabSession).where(
+    query = select(RehabSession).options(joinedload(RehabSession.exercise)).where(
         RehabSession.patient_id == patient_id,
         RehabSession.status != SessionStatus.IN_PROGRESS,
     )
@@ -70,6 +70,17 @@ def get_rom_trend(
     if exercise_id:
         query = query.where(RehabSession.exercise_id == exercise_id)
     sessions = db.scalars(query.order_by(RehabSession.started_at.asc()).limit(5000)).all()
+
+    target_rom = None
+    if exercise_id:
+        rx = db.scalar(select(Prescription).where(Prescription.patient_id == patient_id, Prescription.exercise_id == exercise_id, Prescription.is_active == True))
+        if rx:
+            target_rom = rx.target_rom_deg
+    if target_rom is None:
+        rx = db.scalar(select(Prescription).where(Prescription.patient_id == patient_id, Prescription.is_active == True).order_by(Prescription.created_at.desc()))
+        if rx:
+            target_rom = rx.target_rom_deg
+
     grouped: dict[date, list[RehabSession]] = {}
     for s in sessions:
         grouped.setdefault(_aware_utc(s.started_at).date(), []).append(s)
@@ -77,11 +88,18 @@ def get_rom_trend(
     for day, day_sessions in sorted(grouped.items()):
         average_peaks = [s.average_peak_rom_deg for s in day_sessions if s.average_peak_rom_deg is not None]
         max_peaks = [s.maximum_peak_rom_deg for s in day_sessions if s.maximum_peak_rom_deg is not None]
+        avg_rom_val = round(sum(average_peaks) / len(average_peaks), 2) if average_peaks else 0.0
+        best_peak = max(max_peaks) if max_peaks else None
+        ex_name = day_sessions[0].exercise.name if day_sessions[0].exercise else None
         response.append(ROMTrendPoint(
             date=day,
             sessions_count=len(day_sessions),
-            average_peak_rom_deg=round(sum(average_peaks) / len(average_peaks), 2) if average_peaks else None,
-            best_peak_rom_deg=max(max_peaks) if max_peaks else None,
+            average_peak_rom_deg=avg_rom_val,
+            avg_rom=avg_rom_val,
+            best_peak_rom_deg=best_peak,
+            max_rom=best_peak,
+            target_rom=target_rom,
             successful_repetitions=sum(s.successful_repetitions for s in day_sessions),
+            exercise_name=ex_name,
         ))
     return response

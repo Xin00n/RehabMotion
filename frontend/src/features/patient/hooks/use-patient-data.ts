@@ -49,8 +49,19 @@ export function usePatientSessions(explicitPatientId?: number | string) {
   })
 }
 
-function isDateInCurrentWeek(dateString: string): boolean {
-  const date = new Date(dateString)
+export function getSessionDate(s?: Partial<Session> | null): string {
+  if (!s) return ""
+  return s.completed_at || s.ended_at || s.started_at || s.created_at || ""
+}
+
+export function getSessionReps(s?: Partial<Session> | null): number {
+  if (!s) return 0
+  return s.repetitions_completed ?? s.successful_repetitions ?? s.total_repetitions ?? 0
+}
+
+export function isDateInCurrentWeek(dateInput?: string | Date | null): boolean {
+  if (!dateInput) return false
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
   if (isNaN(date.getTime())) return false
 
   const now = new Date()
@@ -76,17 +87,18 @@ export function usePatientDashboardData() {
 
   // Sesi terakhir diurutkan berdasarkan tanggal terbaru
   const sortedSessions = [...sessions].sort((a, b) => {
-    const timeA = new Date(b.completed_at || b.created_at).getTime()
-    const timeB = new Date(a.completed_at || a.created_at).getTime()
+    const timeA = new Date(getSessionDate(b)).getTime() || 0
+    const timeB = new Date(getSessionDate(a)).getTime() || 0
     return timeA - timeB
   })
 
   const latestSession: Session | null = sortedSessions[0] || null
 
   // Total sesi minggu ini
-  const sessionsThisWeekCount = sessions.filter((s) =>
-    isDateInCurrentWeek(s.completed_at || s.created_at)
-  ).length
+  const sessionsThisWeekCount = sessions.filter((s) => {
+    const dateStr = getSessionDate(s)
+    return isDateInCurrentWeek(dateStr)
+  }).length
 
   return {
     isLoading: prescriptionsQuery.isLoading || sessionsQuery.isLoading,
@@ -95,6 +107,10 @@ export function usePatientDashboardData() {
     latestSession,
     sessionsThisWeekCount,
     prescriptions,
+    refetch: () => {
+      prescriptionsQuery.refetch()
+      sessionsQuery.refetch()
+    },
   }
 }
 

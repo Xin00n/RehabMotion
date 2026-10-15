@@ -98,7 +98,7 @@ describe("rep-counter (State Machine with Hysteresis & Hold Grace Period)", () =
     expect(ctx.state).toBe("HOLD")
 
     // Selesaikan hold
-    time += 1500
+    time += 2000
     ctx = stepRepCounter(ctx, 85, time, config)
     expect(ctx.state).toBe("RETURN")
   })

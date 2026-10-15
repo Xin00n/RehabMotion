@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
 import { AlertOctagon, Volume2, VolumeX, CheckCircle, Flame, ArrowLeft, Loader2, HelpCircle } from "lucide-react"
 
@@ -47,6 +48,7 @@ export function SessionPlayer({
   exerciseName = "Elbow Flexion",
 }: SessionPlayerProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Video & Canvas Refs
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -192,13 +194,15 @@ export function SessionPlayer({
         })
       } catch {
         // Fallback jika API backend offline
+      } finally {
+        await queryClient.invalidateQueries({ queryKey: ["patients"] })
       }
 
       // Berhenti audio & redirect
       audioCoach.stop()
       navigate(`/dashboard?session_finished=true&reps=${totalReps}`)
     },
-    [flushBatchMeasurements, sessionId, navigate]
+    [flushBatchMeasurements, sessionId, navigate, queryClient]
   )
   const handleFinishSessionRef = useRef(handleFinishSession)
   useEffect(() => {

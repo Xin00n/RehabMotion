@@ -124,7 +124,10 @@ let mockPrescriptions: Prescription[] = [
   },
 ]
 
-const mockSessions: Session[] = [
+const nowTime = Date.now()
+const oneDayMs = 24 * 60 * 60 * 1000
+
+let mockSessions: Session[] = [
   {
     id: 1,
     patient_id: 1,
@@ -138,8 +141,12 @@ const mockSessions: Session[] = [
     avg_rom: 88,
     average_peak_rom_deg: 88,
     maximum_peak_rom_deg: 92,
-    created_at: "2026-10-13T10:00:00Z",
-    completed_at: "2026-10-13T10:15:00Z",
+    created_at: new Date(nowTime - 2 * 3600 * 1000).toISOString(),
+    started_at: new Date(nowTime - 2 * 3600 * 1000).toISOString(),
+    completed_at: new Date(nowTime - (2 * 3600 - 900) * 1000).toISOString(),
+    ended_at: new Date(nowTime - (2 * 3600 - 900) * 1000).toISOString(),
+    duration_seconds: 900,
+    status: "completed",
   },
   {
     id: 2,
@@ -154,8 +161,12 @@ const mockSessions: Session[] = [
     avg_rom: 115,
     average_peak_rom_deg: 115,
     maximum_peak_rom_deg: 122,
-    created_at: "2026-10-12T14:00:00Z",
-    completed_at: "2026-10-12T14:15:00Z",
+    created_at: new Date(nowTime - oneDayMs).toISOString(),
+    started_at: new Date(nowTime - oneDayMs).toISOString(),
+    completed_at: new Date(nowTime - oneDayMs + 900 * 1000).toISOString(),
+    ended_at: new Date(nowTime - oneDayMs + 900 * 1000).toISOString(),
+    duration_seconds: 900,
+    status: "completed",
   },
   {
     id: 3,
@@ -170,8 +181,12 @@ const mockSessions: Session[] = [
     avg_rom: 82,
     average_peak_rom_deg: 82,
     maximum_peak_rom_deg: 86,
-    created_at: "2026-10-10T09:00:00Z",
-    completed_at: "2026-10-10T09:15:00Z",
+    created_at: new Date(nowTime - 3 * oneDayMs).toISOString(),
+    started_at: new Date(nowTime - 3 * oneDayMs).toISOString(),
+    completed_at: new Date(nowTime - 3 * oneDayMs + 900 * 1000).toISOString(),
+    ended_at: new Date(nowTime - 3 * oneDayMs + 900 * 1000).toISOString(),
+    duration_seconds: 900,
+    status: "completed",
   },
 ]
 
@@ -338,10 +353,24 @@ export function handleMockRequest<T>(
 
   // 13. POST /sessions
   if (cleanEndpoint === "/sessions" && method === "POST") {
-    return {
-      id: Date.now(),
-      created_at: new Date().toISOString(),
-    } as T
+    const data = (body as Partial<Session>) || {}
+    const newId = Date.now()
+    const nowIso = new Date().toISOString()
+    const newSession: Session = {
+      id: newId,
+      patient_id: data.patient_id || 1,
+      prescription_id: data.prescription_id || 1,
+      exercise_id: data.exercise_id || 1,
+      exercise_name: data.exercise_name || "Fleksi Siku (Elbow Flexion)",
+      status: "in_progress",
+      started_at: nowIso,
+      created_at: nowIso,
+      total_repetitions: 0,
+      successful_repetitions: 0,
+      repetitions_completed: 0,
+    }
+    mockSessions = [newSession, ...mockSessions]
+    return newSession as T
   }
 
   // 14. POST /sessions/:id/rom-measurements
@@ -351,7 +380,48 @@ export function handleMockRequest<T>(
 
   // 15. POST /sessions/:id/finish
   if (cleanEndpoint.includes("/finish") && method === "POST") {
-    return { success: true, completed_at: new Date().toISOString() } as T
+    const parts = cleanEndpoint.split("/")
+    const targetSessionId = Number(parts[2])
+    const finishData = (body as any) || {}
+    const nowIso = new Date().toISOString()
+
+    let matched = mockSessions.find((s) => s.id === targetSessionId)
+    if (matched) {
+      matched.status = finishData.status || "completed"
+      matched.total_repetitions = finishData.total_repetitions ?? 10
+      matched.successful_repetitions = finishData.successful_repetitions ?? 10
+      matched.repetitions_completed = finishData.successful_repetitions ?? 10
+      matched.average_peak_rom_deg = finishData.average_peak_rom_deg ?? 88
+      matched.avg_rom = finishData.average_peak_rom_deg ?? 88
+      matched.maximum_peak_rom_deg = finishData.maximum_peak_rom_deg ?? 92
+      matched.ended_at = nowIso
+      matched.completed_at = nowIso
+      matched.stop_reason = finishData.stop_reason
+      matched.notes = finishData.notes
+    } else {
+      matched = {
+        id: targetSessionId || Date.now(),
+        patient_id: 1,
+        prescription_id: 1,
+        exercise_id: 1,
+        exercise_name: "Fleksi Siku (Elbow Flexion)",
+        status: finishData.status || "completed",
+        total_repetitions: finishData.total_repetitions ?? 10,
+        successful_repetitions: finishData.successful_repetitions ?? 10,
+        repetitions_completed: finishData.successful_repetitions ?? 10,
+        average_peak_rom_deg: finishData.average_peak_rom_deg ?? 88,
+        avg_rom: finishData.average_peak_rom_deg ?? 88,
+        maximum_peak_rom_deg: finishData.maximum_peak_rom_deg ?? 92,
+        started_at: nowIso,
+        created_at: nowIso,
+        ended_at: nowIso,
+        completed_at: nowIso,
+        stop_reason: finishData.stop_reason,
+        notes: finishData.notes,
+      }
+      mockSessions = [matched, ...mockSessions]
+    }
+    return matched as T
   }
 
   // 16. GET /patients/:id/access

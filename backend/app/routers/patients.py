@@ -1,34 +1,75 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user, require_patient_access
-from app.models import AccessRole, PatientAccess, PatientProfile, User, UserRole
+from app.models import AccessRole, AffectedSide, PatientAccess, PatientProfile, Prescription, RehabSession, SessionStatus, User, UserRole
 from app.schemas import AccessCreate, AccessOut, PatientProfileOut, PatientProfileUpdate, PatientSummary
 
 router = APIRouter(prefix="/patients", tags=["Patients & Access"])
 
 
+def _build_patient_summary(
+    db: Session,
+    patient: User,
+    access_role: AccessRole | None = None,
+    side: AffectedSide | None = None,
+    profile: PatientProfile | None = None,
+) -> PatientSummary:
+    if profile is None:
+        profile = db.get(PatientProfile, patient.id)
+    affected_side = side or (profile.default_affected_side if profile else None)
+
+    rx_count = db.scalar(
+        select(func.count(Prescription.id))
+        .where(Prescription.patient_id == patient.id, Prescription.is_active == True)
+    ) or 0
+
+    last_session = db.scalar(
+        select(RehabSession.started_at)
+        .where(RehabSession.patient_id == patient.id)
+        .order_by(RehabSession.started_at.desc())
+        .limit(1)
+    )
+
+    total_sessions = db.scalar(
+        select(func.count(RehabSession.id))
+        .where(RehabSession.patient_id == patient.id)
+    ) or 0
+
+    completed_sessions = db.scalar(
+        select(func.count(RehabSession.id))
+        .where(RehabSession.patient_id == patient.id, RehabSession.status == SessionStatus.COMPLETED)
+    ) or 0
+
+    compliance_rate = round((completed_sessions / total_sessions * 100), 1) if total_sessions > 0 else None
+    compliance_status = "good" if (compliance_rate is not None and compliance_rate >= 80) else (
+        "moderate" if (compliance_rate is not None and compliance_rate >= 50) else "poor"
+    )
+
+    return PatientSummary(
+        id=patient.id,
+        full_name=patient.full_name,
+        email=patient.email,
+        role=patient.role,
+        access_role=access_role,
+        default_affected_side=affected_side,
+        active_prescriptions_count=rx_count,
+        last_session_at=last_session,
+        compliance_rate=compliance_rate,
+        compliance_status=compliance_status,
+        notes=profile.caregiver_notes if profile else None,
+    )
+
+
 @router.get("", response_model=list[PatientSummary])
 def list_accessible_patients(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role == UserRole.PATIENT:
-        profile = db.get(PatientProfile, user.id)
-        return [PatientSummary(id=user.id, full_name=user.full_name, email=user.email, role=user.role,
-                               default_affected_side=profile.default_affected_side if profile else None)]
+        return [_build_patient_summary(db, user)]
     if user.role == UserRole.ADMIN:
         patients = db.scalars(select(User).where(User.role == UserRole.PATIENT).order_by(User.full_name)).all()
-        result: list[PatientSummary] = []
-        for p in patients:
-            prof = db.get(PatientProfile, p.id)
-            result.append(PatientSummary(
-                id=p.id,
-                full_name=p.full_name,
-                email=p.email,
-                role=p.role,
-                default_affected_side=prof.default_affected_side if prof else None,
-            ))
-        return result
+        return [_build_patient_summary(db, p) for p in patients]
     rows = db.execute(
         select(User, PatientAccess.access_role, PatientProfile.default_affected_side)
         .join(PatientAccess, PatientAccess.patient_id == User.id)
@@ -36,8 +77,7 @@ def list_accessible_patients(user: User = Depends(get_current_user), db: Session
         .where(PatientAccess.accessor_id == user.id, User.role == UserRole.PATIENT)
         .order_by(User.full_name)
     ).all()
-    return [PatientSummary(id=p.id, full_name=p.full_name, email=p.email, role=p.role,
-                           access_role=access_role, default_affected_side=side) for p, access_role, side in rows]
+    return [_build_patient_summary(db, p, access_role=access_role, side=side) for p, access_role, side in rows]
 
 
 @router.get("/me/profile", response_model=PatientProfileOut)
@@ -61,8 +101,16 @@ def update_my_profile(payload: PatientProfileUpdate, user: User = Depends(get_cu
     if not profile:
         profile = PatientProfile(user_id=user.id)
         db.add(profile)
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        setattr(profile, key, value)
+    data = payload.model_dump(exclude_unset=True)
+    if "full_name" in data and data["full_name"]:
+        user.full_name = data.pop("full_name").strip()
+    if "notes" in data:
+        notes_val = data.pop("notes")
+        if "caregiver_notes" not in data or not data["caregiver_notes"]:
+            profile.caregiver_notes = notes_val
+    for key, value in data.items():
+        if hasattr(profile, key):
+            setattr(profile, key, value)
     db.commit()
     db.refresh(profile)
     return profile
@@ -74,14 +122,7 @@ def get_patient_summary(patient_id: int, user: User = Depends(get_current_user),
     patient = db.get(User, patient_id)
     if not patient or patient.role != UserRole.PATIENT:
         raise HTTPException(status_code=404, detail="Pasien tidak ditemukan")
-    profile = db.get(PatientProfile, patient_id)
-    return PatientSummary(
-        id=patient.id,
-        full_name=patient.full_name,
-        email=patient.email,
-        role=patient.role,
-        default_affected_side=profile.default_affected_side if profile else None,
-    )
+    return _build_patient_summary(db, patient)
 
 
 @router.get("/{patient_id}/profile", response_model=PatientProfileOut)
@@ -109,8 +150,16 @@ def update_patient_profile(patient_id: int, payload: PatientProfileUpdate, user:
     if not profile:
         profile = PatientProfile(user_id=patient_id)
         db.add(profile)
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        setattr(profile, key, value)
+    data = payload.model_dump(exclude_unset=True)
+    if "full_name" in data and data["full_name"]:
+        patient.full_name = data.pop("full_name").strip()
+    if "notes" in data:
+        notes_val = data.pop("notes")
+        if "caregiver_notes" not in data or not data["caregiver_notes"]:
+            profile.caregiver_notes = notes_val
+    for key, value in data.items():
+        if hasattr(profile, key):
+            setattr(profile, key, value)
     db.commit()
     db.refresh(profile)
     return profile
