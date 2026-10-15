@@ -62,6 +62,13 @@ export function SessionPlayer({
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
+  const isAudioEnabledRef = useRef(isAudioEnabled)
+  useEffect(() => {
+    isAudioEnabledRef.current = isAudioEnabled
+  }, [isAudioEnabled])
+
+  const hasAnnouncedStartRef = useRef(false)
+  const lastHoldSecondRef = useRef<number | null>(null)
   const [showGuideModal, setShowGuideModal] = useState(false)
 
   const activeExerciseName =
@@ -170,7 +177,12 @@ export function SessionPlayer({
       if (isSessionFinishedRef.current) return
       isSessionFinishedRef.current = true
       setIsFinishing(true)
-      audioCoach.speak(isEmergency ? "Sesi dihentikan." : "Sesi latihan selesai. Kerja luar biasa!", true)
+      if (isEmergency) {
+        audioCoach.speak("Sesi dihentikan.", true)
+      } else {
+        audioCoach.playChime("finish")
+        audioCoach.speak("Sesi latihan selesai. Kerja luar biasa!", true)
+      }
       await flushBatchMeasurements()
 
       // Kalkulasi peak ROM
@@ -215,12 +227,29 @@ export function SessionPlayer({
     handleFinishSession("Dihentikan oleh pasien karena rasa nyeri atau kelelahan.", true)
   }
 
-  // Audio Feedback effect
+  // Sinkronisasi status audio coach dengan state toggle
   useEffect(() => {
-    if (isAudioEnabled && repContext.feedbackMessage) {
-      audioCoach.speak(repContext.feedbackMessage)
+    audioCoach.setMuted(!isAudioEnabled)
+    if (!isAudioEnabled) {
+      audioCoach.stop()
     }
-  }, [isAudioEnabled, repContext.feedbackMessage, repContext.state])
+  }, [isAudioEnabled])
+
+  // User interaction unlock listener & cleanup
+  useEffect(() => {
+    const handleUnlock = () => {
+      audioCoach.unlock()
+    }
+    window.addEventListener("click", handleUnlock)
+    window.addEventListener("touchstart", handleUnlock)
+    window.addEventListener("keydown", handleUnlock)
+    return () => {
+      window.removeEventListener("click", handleUnlock)
+      window.removeEventListener("touchstart", handleUnlock)
+      window.removeEventListener("keydown", handleUnlock)
+      audioCoach.stop()
+    }
+  }, [])
 
   // Screen Wake Lock & Tab Visibility listener agar layar & kamera tidak sleep
   useEffect(() => {
@@ -363,6 +392,16 @@ export function SessionPlayer({
                     results.landmarks[0].length >= 33
                   ) {
                     setIsPoseReady(true)
+
+                    // Sambutan audio saat pose pertama kali terdeteksi
+                    if (!hasAnnouncedStartRef.current) {
+                      hasAnnouncedStartRef.current = true
+                      if (isAudioEnabledRef.current) {
+                        audioCoach.playChime("start")
+                        audioCoach.speak("Kamera aktif. Mulai gerakan perlahan.")
+                      }
+                    }
+
                     const landmarks = results.landmarks[0]
                     const worldLandmarks = (results as any).worldLandmarks?.[0]
                     const currentType = resolvedExerciseTypeRef.current
@@ -391,6 +430,41 @@ export function SessionPlayer({
                       repContextRef.current = nextCtx
                       setRepContext(nextCtx)
 
+                      // Notifikasi Audio Cues Berdasarkan Transisi Status Latihan
+                      if (isAudioEnabledRef.current) {
+                        // A. Masuk ke zona tahan (target tercapai)
+                        if (prevCtx.state !== "HOLD" && nextCtx.state === "HOLD") {
+                          audioCoach.playChime("target")
+                          audioCoach.speak("Target tercapai! Tahan posisi.")
+                          lastHoldSecondRef.current = null
+                        }
+
+                        // B. Detak countdown detik penahanan selama di fase HOLD
+                        if (nextCtx.state === "HOLD" && nextCtx.holdStartTime) {
+                          const holdDuration = repConfigRef.current.holdDurationMs ?? 2000
+                          const remainingMs = Math.max(0, holdDuration - (now - nextCtx.holdStartTime))
+                          const currentSec = Math.ceil(remainingMs / 1000)
+                          if (lastHoldSecondRef.current !== currentSec && currentSec > 0) {
+                            lastHoldSecondRef.current = currentSec
+                            audioCoach.playChime("tick")
+                          }
+                        } else {
+                          lastHoldSecondRef.current = null
+                        }
+
+                        // C. Repetisi baru selesai
+                        if (nextCtx.repsCompleted > prevCtx.repsCompleted) {
+                          audioCoach.playChime("rep")
+                          audioCoach.speak(`Repetisi ${nextCtx.repsCompleted} selesai, bagus!`)
+                        }
+
+                        // D. Peringatan koreksi postur kompensasi
+                        if (!prevCtx.isCompensated && nextCtx.isCompensated) {
+                          audioCoach.playChime("warning")
+                          audioCoach.speak("Perhatian: Jaga postur tetap tegak.")
+                        }
+                      }
+
                       // Simpan peak ROM saat memasuki HOLD atau PEAK_CHECK
                       if (nextCtx.state === "HOLD" || nextCtx.state === "PEAK_CHECK") {
                         peakRomListRef.current.push(angle)
@@ -417,6 +491,10 @@ export function SessionPlayer({
                         prevCtx.repsCompleted < currentTargetReps &&
                         !isSessionFinishedRef.current
                       ) {
+                        if (isAudioEnabledRef.current) {
+                          audioCoach.playChime("finish")
+                          audioCoach.speak("Target latihan selesai! Kerja luar biasa.", true)
+                        }
                         setTimeout(() => {
                           handleFinishSessionRef.current("Target repetisi berhasil diselesaikan penuh.")
                         }, 1200)
@@ -536,10 +614,27 @@ export function SessionPlayer({
           </div>
           <Button
             variant="outline"
+            size="sm"
+            onClick={() => {
+              audioCoach.unlock()
+              audioCoach.testSound()
+            }}
+            className="cursor-pointer gap-1.5 text-xs sm:text-sm font-semibold text-primary hover:text-primary"
+            title="Uji coba panduan suara dan bunyi latihan"
+          >
+            <Volume2 className="size-4" />
+            <span className="hidden sm:inline">Tes Suara</span>
+          </Button>
+          <Button
+            variant="outline"
             size="icon-lg"
             onClick={() => {
-              if (isAudioEnabled) audioCoach.stop()
-              setIsAudioEnabled(!isAudioEnabled)
+              const next = !isAudioEnabled
+              setIsAudioEnabled(next)
+              audioCoach.setMuted(!next)
+              if (next) {
+                audioCoach.unlock()
+              }
             }}
             className="cursor-pointer"
             title={isAudioEnabled ? "Matikan panduan suara" : "Aktifkan panduan suara"}

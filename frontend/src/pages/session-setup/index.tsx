@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { usePatientPrescriptions } from "@/features/patient/hooks/use-patient-data"
 import { createSession } from "@/features/session/api/session-api"
 import { getExerciseIllustration } from "@/pages/exercises"
+import { audioCoach } from "@/features/session-player/audio-coach"
 import type { Prescription } from "@/types/patient"
 
 export default function SessionSetupPage() {
@@ -109,6 +110,9 @@ export default function SessionSetupPage() {
   }
 
   const handleConfirmStartSession = async () => {
+    // Buka kunci AudioContext saat ada interaksi klik user langsung
+    audioCoach.unlock()
+
     if (!prescriptionId) return
 
     // Ambil exercise_id dari relasi exercise pada prescription
