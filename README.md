@@ -6,14 +6,39 @@ RehabMotion adalah platform telerehabilitasi berbasis web yang dirancang khusus 
 
 ---
 
+## 🌐 Live Demo & Akun Uji Coba (Untuk Juri & Panitia)
+
+Aplikasi RehabMotion telah aktif dan dapat dicoba secara langsung tanpa instalasi lokal:
+🔗 **URL Demo:** **[https://rehabmotion.fly.dev/](https://rehabmotion.fly.dev/)**
+
+Gunakan akun demo berikut untuk menguji seluruh fitur platform:
+
+| Peran | Email | Password | Akses & Fitur Utama |
+|---|---|---|---|
+| 👨‍⚕️ **Dokter / Klinisi** | `dokter@rehabmotion.id` | `password123` | **Dashboard Dokter**: Manajemen pasien, resep latihan ROM (target sudut & repetisi), grafik tren kepatuhan & kemajuan ROM, serta ekspor laporan klinis PDF. |
+| 🧑‍🦽 **Pasien Pasca-Stroke** | `pasien@rehabmotion.id` | `password123` | **Dashboard Pasien & Pemain Latihan**: Pelacakan sudut sendi 33 Landmark AI (MediaPipe), panduan suara Real-Time Audio Coach, tombol & shortcut **Mode Mute** (`M`), deteksi kompensasi postur, dan ringkasan repetisi. |
+
+### 🧭 Panduan Cepat Uji Coba untuk Juri:
+1. **Uji Coba Alur Pasien (Latihan Interaktif AI)**:
+   - Login menggunakan akun **`pasien@rehabmotion.id`** / `password123`.
+   - Di dashboard pasien, klik **"Mulai Latihan"** pada resep aktif.
+   - Pada halaman persiapan kamera, posisikan tubuh Anda di depan webcam. Anda juga dapat memilih **"Suara Aktif"** atau **"Mode Mute"**.
+   - Klik **"Siap, Mulai Latihan"** untuk masuk ke layar latihan:
+     - Lakukan gerakan menekuk siku atau abduksi bahu di depan kamera.
+     - Perhatikan skeleton overlay, badge sudut real-time, suara chime Web Audio API saat mencapai target, dan tombol **"Tes Suara"** serta **"Mode Mute"**.
+2. **Uji Coba Alur Dokter (Monitoring & Resep)**:
+   - Logout lalu login kembali menggunakan akun **`dokter@rehabmotion.id`** / `password123`.
+   - Buka profil pasien **Budi Santoso** untuk melihat histori sesi yang baru saja diselesaikan, grafik pemulihan ROM, dan klik **"Cetak Laporan PDF"**.
+
+---
+
 ## 🏛️ Arsitektur & Prinsip Desain
 
 - **Edge-First Computer Vision**: Pelacakan kerangka tubuh (*pose tracking*) menggunakan MediaPipe BlazePose dan kalkulasi sudut *Range of Motion* (ROM) dieksekusi **100% di browser pengguna**. Tidak ada rekaman kamera atau frame video mentah yang diunggah ke server demi privasi pasien (*privacy-by-design*).
-- **Real-Time Audio Coaching**: Memberikan feedback suara interaktif (misalnya pengingat saat kompensasi bahu terdeteksi atau motivasi ketika target sudut tercapai) langsung saat sesi latihan berjalan.
+- **Dual-Layer Audio Coaching**: Menggabungkan Web Audio API sintetis (chime/bel dengan 0ms latensi) dan Web Speech API suara verbal, dilengkapi dukungan **Mode Mute** satu tombol / shortcut keyboard `M`.
 - **Micro-Structured Metrics**: Backend hanya menerima data metrik terstruktur (sudut ROM, fase gerakan, capaian repetisi, durasi latihan, dan catatan klinis).
-- **Role-Based Collaboration**: Menghubungkan 3 peran pengguna utama:
+- **Role-Based Collaboration**: Menghubungkan 2 peran pengguna utama:
   - **Pasien**: Menjalankan sesi latihan dengan panduan HUD & audio coach, memantau kemajuan ROM mandiri.
-  - **Caregiver**: Membantu pendampingan latihan, setup kamera, dan pemantauan kepatuhan harian.
   - **Klinisi / Fisioterapis**: Memberikan resep latihan terukur (target sudut ROM, repetisi, frekuensi), memantau tren perkembangan, dan mengekspor laporan kemajuan pasien.
 
 ---
